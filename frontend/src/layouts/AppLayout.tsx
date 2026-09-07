@@ -22,6 +22,7 @@ export default function AppLayout() {
       ]
     : [
         { path: '/manager', label: 'Manager Dashboard' },
+        { path: '/manager/reports', label: 'Team Reports' },
         { path: '/projects', label: 'Projects' },
       ];
 

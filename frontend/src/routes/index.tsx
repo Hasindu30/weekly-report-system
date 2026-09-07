@@ -8,6 +8,8 @@ import WeeklyReportPage from '../pages/WeeklyReportPage';
 import ReportHistoryPage from '../pages/ReportHistoryPage';
 import ReportDetailPage from '../pages/ReportDetailPage';
 import ManagerDashboardPage from '../pages/ManagerDashboardPage';
+import ManagerReportsPage from '../pages/ManagerReportsPage';
+import ManagerReviewPage from '../pages/ManagerReviewPage';
 import ProjectsPage from '../pages/ProjectsPage';
 import ProtectedRoute from './ProtectedRoute';
 import PublicOnlyRoute from './PublicOnlyRoute';
@@ -43,6 +45,8 @@ export default function AppRoutes() {
             }
           >
             <Route path="/manager" element={<ManagerDashboardPage />} />
+            <Route path="/manager/reports" element={<ManagerReportsPage />} />
+            <Route path="/manager/reports/:id" element={<ManagerReviewPage />} />
           </Route>
 
           {/* Shared Authenticated Routes */}

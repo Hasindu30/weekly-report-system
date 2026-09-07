@@ -9,6 +9,12 @@ export const ReportStatus = {
 } as const;
 export type ReportStatus = (typeof ReportStatus)[keyof typeof ReportStatus];
 
+export const ReviewAction = {
+  APPROVED: 'APPROVED',
+  REQUEST_CHANGES: 'REQUEST_CHANGES',
+} as const;
+export type ReviewAction = (typeof ReviewAction)[keyof typeof ReviewAction];
+
 export const TaskPriority = {
   LOW: 'LOW',
   MEDIUM: 'MEDIUM',
@@ -69,6 +75,51 @@ export interface ReportHourBreakdown {
   hours: number;
 }
 
+export interface ReportReview {
+  id: string;
+  action: ReviewAction;
+  comment: string | null;
+  reportVersion: number;
+  createdAt: string;
+  reviewer?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+export interface ReportVersionMetadata {
+  id: string;
+  versionNumber: number;
+  submittedAt: string;
+  createdAt: string;
+}
+
+export interface ReportVersionSnapshot {
+  weekStart: string;
+  weekEnd: string;
+  notes: string | null;
+  project: {
+    id: string;
+    name: string;
+    description?: string | null;
+  };
+  tasks: ReportTask[];
+  nextWeekTasks: NextWeekTask[];
+  blockers: ReportBlocker[];
+  achievements: ReportAchievement[];
+  hourBreakdowns: ReportHourBreakdown[];
+}
+
+export interface ReportVersion {
+  id: string;
+  versionNumber: number;
+  snapshot: ReportVersionSnapshot;
+  submittedAt: string;
+  createdAt: string;
+}
+
 export interface WeeklyReport {
   id: string;
   user?: User;
@@ -86,6 +137,8 @@ export interface WeeklyReport {
   blockers: ReportBlocker[];
   achievements: ReportAchievement[];
   hourBreakdowns: ReportHourBreakdown[];
+  reviews?: ReportReview[];
+  versions?: ReportVersionMetadata[];
 }
 
 export interface CreateWeeklyReportPayload {
@@ -113,6 +166,26 @@ export interface UpdateWeeklyReportPayload {
 }
 
 export interface PaginatedReportsResponse {
+  data: WeeklyReport[];
+  meta: {
+    currentPage: number;
+    limit: number;
+    totalRecords: number;
+    totalPages: number;
+  };
+}
+
+export interface ManagerReportQuery {
+  page?: number;
+  limit?: number;
+  teamMemberId?: string;
+  projectId?: string;
+  status?: ReportStatus;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ManagerReportsResponse {
   data: WeeklyReport[];
   meta: {
     currentPage: number;
