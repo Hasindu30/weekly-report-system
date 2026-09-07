@@ -6,6 +6,7 @@ import RegisterPage from '../pages/RegisterPage';
 import MemberDashboardPage from '../pages/MemberDashboardPage';
 import WeeklyReportPage from '../pages/WeeklyReportPage';
 import ReportHistoryPage from '../pages/ReportHistoryPage';
+import ReportDetailPage from '../pages/ReportDetailPage';
 import ManagerDashboardPage from '../pages/ManagerDashboardPage';
 import ProjectsPage from '../pages/ProjectsPage';
 import ProtectedRoute from './ProtectedRoute';
@@ -31,6 +32,8 @@ export default function AppRoutes() {
             <Route path="/member" element={<MemberDashboardPage />} />
             <Route path="/reports/new" element={<WeeklyReportPage />} />
             <Route path="/reports/history" element={<ReportHistoryPage />} />
+            <Route path="/reports/:id" element={<ReportDetailPage />} />
+            <Route path="/reports/:id/edit" element={<WeeklyReportPage />} />
           </Route>
 
           {/* Manager & Admin Routes */}
