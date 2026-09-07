@@ -58,4 +58,12 @@ export class ReportsController {
     const userId = (req.user as any).id;
     return this.reportsService.update(userId, id, updateWeeklyReportDto);
   }
+
+  @Post(':id/submit')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.TEAM_MEMBER)
+  submit(@Req() req: Request, @Param('id') id: string) {
+    const userId = (req.user as any).id;
+    return this.reportsService.submit(userId, id);
+  }
 }

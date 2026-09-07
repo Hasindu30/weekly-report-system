@@ -17,6 +17,8 @@ import { NextWeekTask } from './next-week-task.entity';
 import { ReportBlocker } from './report-blocker.entity';
 import { ReportAchievement } from './report-achievement.entity';
 import { ReportHourBreakdown } from './report-hour-breakdown.entity';
+import { ReportReview } from './report-review.entity';
+import { ReportVersion } from './report-version.entity';
 
 @Entity('weekly_reports')
 @Unique('UQ_user_week_start', ['user', 'weekStart'])
@@ -80,4 +82,10 @@ export class WeeklyReport {
     { cascade: true },
   )
   hourBreakdowns: ReportHourBreakdown[];
+
+  @OneToMany(() => ReportReview, (review) => review.report, { cascade: true })
+  reviews: ReportReview[];
+
+  @OneToMany(() => ReportVersion, (version) => version.report, { cascade: true })
+  versions: ReportVersion[];
 }

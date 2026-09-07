@@ -6,8 +6,11 @@ import { NextWeekTask } from './entities/next-week-task.entity';
 import { ReportBlocker } from './entities/report-blocker.entity';
 import { ReportAchievement } from './entities/report-achievement.entity';
 import { ReportHourBreakdown } from './entities/report-hour-breakdown.entity';
+import { ReportReview } from './entities/report-review.entity';
+import { ReportVersion } from './entities/report-version.entity';
 import { ReportsService } from './reports.service';
 import { ReportsController } from './reports.controller';
+import { ManagerReportsController } from './manager-reports.controller';
 import { ProjectsModule } from '../projects/projects.module';
 
 @Module({
@@ -19,11 +22,14 @@ import { ProjectsModule } from '../projects/projects.module';
       ReportBlocker,
       ReportAchievement,
       ReportHourBreakdown,
+      ReportReview,
+      ReportVersion,
     ]),
     ProjectsModule,
   ],
-  controllers: [ReportsController],
+  controllers: [ReportsController, ManagerReportsController],
   providers: [ReportsService],
   exports: [ReportsService, TypeOrmModule],
 })
 export class ReportsModule {}
+
