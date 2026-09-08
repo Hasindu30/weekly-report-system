@@ -6,3 +6,14 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CreateProjectPayload {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateProjectPayload {
+  name?: string;
+  description?: string | null;
+  isActive?: boolean;
+}

@@ -61,7 +61,21 @@ export class ProjectsService {
 
   async remove(id: string): Promise<{ message: string }> {
     const project = await this.findOne(id);
-    await this.projectRepository.remove(project);
-    return { message: 'Project deleted successfully' };
+    try {
+      await this.projectRepository.remove(project);
+      return { message: 'Project deleted successfully' };
+    } catch (error: any) {
+      if (
+        error?.code === 'ER_ROW_IS_REFERENCED_2' ||
+        error?.errno === 1451 ||
+        error?.message?.includes('foreign key constraint fails')
+      ) {
+        throw new ConflictException(
+          'This project is used by existing reports and cannot be deleted. Mark it inactive instead.',
+        );
+      }
+      throw error;
+    }
   }
 }
+
