@@ -1,14 +1,16 @@
 import { ReportStatus } from '../types';
 
 interface StatusBadgeProps {
-  status: ReportStatus;
+  status: ReportStatus | 'NOT_STARTED' | string;
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
   const getBadgeStyle = () => {
     switch (status) {
+      case 'NOT_STARTED':
+        return 'bg-gray-100 text-gray-600 border-gray-300';
       case ReportStatus.DRAFT:
-        return 'bg-gray-100 text-gray-700 border-gray-300';
+        return 'bg-purple-50 text-purple-700 border-purple-200';
       case ReportStatus.SUBMITTED:
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case ReportStatus.NEEDS_CORRECTION:
@@ -22,6 +24,8 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
 
   const getLabel = () => {
     switch (status) {
+      case 'NOT_STARTED':
+        return 'Not Started';
       case ReportStatus.DRAFT:
         return 'Draft';
       case ReportStatus.SUBMITTED:
