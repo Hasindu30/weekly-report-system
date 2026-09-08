@@ -14,6 +14,8 @@ import { ReportAchievement } from './entities/report-achievement.entity';
 import { ReportHourBreakdown } from './entities/report-hour-breakdown.entity';
 import { ReportReview } from './entities/report-review.entity';
 import { ReportVersion } from './entities/report-version.entity';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
 import { ProjectsService } from '../projects/projects.service';
 import { CreateWeeklyReportDto } from './dto/create-weekly-report.dto';
 import { UpdateWeeklyReportDto } from './dto/update-weekly-report.dto';
@@ -21,6 +23,7 @@ import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { ManagerReportsQueryDto } from './dto/manager-reports-query.dto';
 import { ReportStatus } from './enums/report-status.enum';
 import { ReviewAction } from './enums/review-action.enum';
+import { TaskStatus } from './enums/task-status.enum';
 
 @Injectable()
 export class ReportsService {
@@ -41,6 +44,8 @@ export class ReportsService {
     private readonly reviewRepository: Repository<ReportReview>,
     @InjectRepository(ReportVersion)
     private readonly versionRepository: Repository<ReportVersion>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly projectsService: ProjectsService,
     private readonly dataSource: DataSource,
   ) {}
@@ -561,5 +566,104 @@ export class ReportsService {
 
       return manager.save(WeeklyReport, report);
     });
+  }
+
+  async getTeamMemberProfile(memberId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: memberId },
+      select: [
+        'id',
+        'firstName',
+        'lastName',
+        'email',
+        'role',
+        'isActive',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== UserRole.TEAM_MEMBER) {
+      throw new BadRequestException('Requested user is not a team member');
+    }
+
+    const totalReports = await this.weeklyReportRepository.count({
+      where: { user: { id: memberId } },
+    });
+
+    const approvedReports = await this.weeklyReportRepository.count({
+      where: { user: { id: memberId }, status: ReportStatus.APPROVED },
+    });
+
+    const needsCorrectionReports = await this.weeklyReportRepository.count({
+      where: { user: { id: memberId }, status: ReportStatus.NEEDS_CORRECTION },
+    });
+
+    const latestReport = await this.weeklyReportRepository.findOne({
+      where: { user: { id: memberId } },
+      order: { weekStart: 'DESC' },
+    });
+
+    const currentReportStatus = latestReport ? latestReport.status : null;
+
+    const totalCompletedTasks = await this.taskRepository
+      .createQueryBuilder('task')
+      .innerJoin('task.report', 'report')
+      .where('report.userId = :userId', { userId: memberId })
+      .andWhere('task.status = :status', { status: TaskStatus.COMPLETED })
+      .getCount();
+
+    const totalBlockers = await this.blockerRepository
+      .createQueryBuilder('blocker')
+      .innerJoin('blocker.report', 'report')
+      .where('report.userId = :userId', { userId: memberId })
+      .getCount();
+
+    const recentReports = await this.weeklyReportRepository.find({
+      where: { user: { id: memberId } },
+      relations: ['project', 'tasks'],
+      order: { weekStart: 'DESC' },
+      take: 20,
+    });
+
+    return {
+      user,
+      summary: {
+        totalReports,
+        approvedReports,
+        needsCorrectionReports,
+        currentReportStatus,
+        totalCompletedTasks,
+        totalBlockers,
+      },
+      recentReports: recentReports.map((r) => ({
+        id: r.id,
+        weekStart: r.weekStart,
+        weekEnd: r.weekEnd,
+        status: r.status,
+        submittedAt: r.submittedAt,
+        approvedAt: r.approvedAt,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        project: {
+          id: r.project?.id,
+          name: r.project?.name,
+        },
+        totalHoursSpent: r.tasks
+          ? Math.round(
+              (r.tasks.reduce(
+                (sum, t) => sum + (Number(t.spentMinutes) || 0),
+                0,
+              ) /
+                60) *
+                10,
+            ) / 10
+          : 0,
+      })),
+    };
   }
 }

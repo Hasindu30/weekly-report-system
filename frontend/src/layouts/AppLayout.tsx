@@ -24,6 +24,9 @@ export default function AppLayout() {
         { path: '/manager', label: 'Manager Dashboard' },
         { path: '/manager/reports', label: 'Team Reports' },
         { path: '/projects', label: 'Projects' },
+        ...(user?.role === UserRole.ADMIN
+          ? [{ path: '/admin/users', label: 'User Management' }]
+          : []),
       ];
 
   const roleBadgeColor =
