@@ -10,6 +10,8 @@ import ReportDetailPage from '../pages/ReportDetailPage';
 import ManagerDashboardPage from '../pages/ManagerDashboardPage';
 import ManagerReportsPage from '../pages/ManagerReportsPage';
 import ManagerReviewPage from '../pages/ManagerReviewPage';
+import TeamMemberProfilePage from '../pages/TeamMemberProfilePage';
+import UserManagementPage from '../pages/UserManagementPage';
 import ProjectsPage from '../pages/ProjectsPage';
 import ProtectedRoute from './ProtectedRoute';
 import PublicOnlyRoute from './PublicOnlyRoute';
@@ -47,6 +49,16 @@ export default function AppRoutes() {
             <Route path="/manager" element={<ManagerDashboardPage />} />
             <Route path="/manager/reports" element={<ManagerReportsPage />} />
             <Route path="/manager/reports/:id" element={<ManagerReviewPage />} />
+            <Route path="/manager/team-members/:id" element={<TeamMemberProfilePage />} />
+          </Route>
+
+          {/* Admin Only Routes */}
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.ADMIN]} />
+            }
+          >
+            <Route path="/admin/users" element={<UserManagementPage />} />
           </Route>
 
           {/* Shared Authenticated Routes */}

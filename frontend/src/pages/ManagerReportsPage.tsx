@@ -219,9 +219,18 @@ export default function ManagerReportsPage() {
                   return (
                     <tr key={report.id} className="hover:bg-gray-50/75 transition-colors">
                       <td className="py-4 px-6 font-medium text-gray-900 whitespace-nowrap">
-                        <div>
-                          {report.user?.firstName} {report.user?.lastName}
-                        </div>
+                        {report.user?.id ? (
+                          <Link
+                            to={`/manager/team-members/${report.user.id}`}
+                            className="text-indigo-600 hover:text-indigo-900 hover:underline font-semibold block"
+                          >
+                            {report.user?.firstName} {report.user?.lastName}
+                          </Link>
+                        ) : (
+                          <div>
+                            {report.user?.firstName} {report.user?.lastName}
+                          </div>
+                        )}
                         <div className="text-xs text-gray-400">{report.user?.email}</div>
                       </td>
                       <td className="py-4 px-6 text-gray-800 whitespace-nowrap">
