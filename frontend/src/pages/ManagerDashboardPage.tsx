@@ -508,7 +508,12 @@ export default function ManagerDashboardPage() {
                   key={member.userId}
                   className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100/70 transition-colors"
                 >
-                  <div className="font-medium text-sm text-gray-900">{member.name}</div>
+                  <Link
+                    to={`/manager/team-members/${member.userId}`}
+                    className="font-medium text-sm text-indigo-600 hover:text-indigo-900 hover:underline"
+                  >
+                    {member.name}
+                  </Link>
                   <StatusBadge status={member.status} />
                 </div>
               ))}

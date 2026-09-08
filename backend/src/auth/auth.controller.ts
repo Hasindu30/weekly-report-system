@@ -14,9 +14,6 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
-import { UserRole } from '../users/enums/user-role.enum';
 
 @Controller('auth')
 export class AuthController {
@@ -67,32 +64,5 @@ export class AuthController {
   @Get('me')
   getMe(@Req() req: Request) {
     return req.user;
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.TEAM_MEMBER, UserRole.MANAGER, UserRole.ADMIN)
-  @Get('member-area')
-  getMemberArea() {
-    return {
-      message: 'Welcome to member area',
-    };
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MANAGER, UserRole.ADMIN)
-  @Get('manager-area')
-  getManagerArea() {
-    return {
-      message: 'Welcome to manager area',
-    };
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @Get('admin-area')
-  getAdminArea() {
-    return {
-      message: 'Welcome to admin area',
-    };
   }
 }
