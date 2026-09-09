@@ -15,13 +15,26 @@ import {
 } from '../types';
 import { projectsApi } from '../api/projects';
 import { reportsApi } from '../api/reports';
+import {
+  Card,
+  SectionHeader,
+  FormField,
+  Input,
+  Select,
+  Textarea,
+  Button,
+  ErrorState,
+} from './ui';
 
 interface ReportFormProps {
   initialReport?: WeeklyReport;
   isEdit?: boolean;
 }
 
-export default function ReportForm({ initialReport, isEdit = false }: ReportFormProps) {
+export default function ReportForm({
+  initialReport,
+  isEdit = false,
+}: ReportFormProps) {
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -30,8 +43,12 @@ export default function ReportForm({ initialReport, isEdit = false }: ReportForm
   const [error, setError] = useState<string | null>(null);
 
   // Form State
-  const [projectId, setProjectId] = useState<string>(initialReport?.project?.id || '');
-  const [weekStart, setWeekStart] = useState<string>(initialReport?.weekStart || '');
+  const [projectId, setProjectId] = useState<string>(
+    initialReport?.project?.id || '',
+  );
+  const [weekStart, setWeekStart] = useState<string>(
+    initialReport?.weekStart || '',
+  );
   const [weekEnd, setWeekEnd] = useState<string>(initialReport?.weekEnd || '');
   const [notes, setNotes] = useState<string>(initialReport?.notes || '');
 
@@ -72,7 +89,10 @@ export default function ReportForm({ initialReport, isEdit = false }: ReportForm
 
   const [hourBreakdowns, setHourBreakdowns] = useState<ReportHourBreakdown[]>(
     initialReport?.hourBreakdowns?.length
-      ? initialReport.hourBreakdowns.map((h) => ({ ...h, hours: Number(h.hours) }))
+      ? initialReport.hourBreakdowns.map((h) => ({
+          ...h,
+          hours: Number(h.hours),
+        }))
       : [
           {
             taskType: TaskType.DEVELOPMENT,
@@ -99,12 +119,12 @@ export default function ReportForm({ initialReport, isEdit = false }: ReportForm
       }
     }
     loadProjects();
-  }, [projectId]);
+  }, []);
 
-  // Tasks handlers
+  // Task handlers
   const handleAddTask = () => {
-    setTasks((prev) => [
-      ...prev,
+    setTasks([
+      ...tasks,
       {
         taskName: '',
         priority: TaskPriority.MEDIUM,
@@ -119,163 +139,140 @@ export default function ReportForm({ initialReport, isEdit = false }: ReportForm
   };
 
   const handleRemoveTask = (index: number) => {
-    setTasks((prev) => prev.filter((_, i) => i !== index));
+    setTasks(tasks.filter((_, i) => i !== index));
   };
 
-  const handleTaskChange = <K extends keyof ReportTask>(
+  const handleTaskChange = (
     index: number,
-    field: K,
-    value: ReportTask[K],
+    field: keyof ReportTask,
+    value: any,
   ) => {
-    setTasks((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
+    const updated = [...tasks];
+    updated[index] = { ...updated[index], [field]: value };
+    setTasks(updated);
   };
 
-  // Next Week Tasks handlers
+  // Next Week Task handlers
   const handleAddNextWeekTask = () => {
-    setNextWeekTasks((prev) => [...prev, { taskName: '' }]);
+    setNextWeekTasks([...nextWeekTasks, { taskName: '' }]);
   };
 
   const handleRemoveNextWeekTask = (index: number) => {
-    setNextWeekTasks((prev) => prev.filter((_, i) => i !== index));
+    setNextWeekTasks(nextWeekTasks.filter((_, i) => i !== index));
   };
 
-  const handleNextWeekTaskChange = (index: number, taskName: string) => {
-    setNextWeekTasks((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], taskName };
-      return updated;
-    });
+  const handleNextWeekTaskChange = (index: number, value: string) => {
+    const updated = [...nextWeekTasks];
+    updated[index] = { ...updated[index], taskName: value };
+    setNextWeekTasks(updated);
   };
 
-  // Blockers handlers (enforces single key issue)
+  // Blocker handlers
   const handleAddBlocker = () => {
-    setBlockers((prev) => [...prev, { description: '', isKeyIssue: false }]);
+    setBlockers([
+      ...blockers,
+      { description: '', isKeyIssue: false },
+    ]);
   };
 
   const handleRemoveBlocker = (index: number) => {
-    setBlockers((prev) => prev.filter((_, i) => i !== index));
+    setBlockers(blockers.filter((_, i) => i !== index));
   };
 
-  const handleBlockerChange = (index: number, description: string) => {
-    setBlockers((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], description };
-      return updated;
-    });
+  const handleBlockerChange = (
+    index: number,
+    field: keyof ReportBlocker,
+    value: any,
+  ) => {
+    const updated = [...blockers];
+    updated[index] = { ...updated[index], [field]: value };
+    setBlockers(updated);
   };
 
   const handleKeyIssueToggle = (index: number) => {
-    setBlockers((prev) =>
-      prev.map((b, i) => ({
-        ...b,
-        isKeyIssue: i === index ? !b.isKeyIssue : false,
-      })),
-    );
+    const updated = blockers.map((b, i) => ({
+      ...b,
+      isKeyIssue: i === index ? !b.isKeyIssue : false,
+    }));
+    setBlockers(updated);
   };
 
-  // Achievements handlers (enforces single key achievement)
+  // Achievement handlers
   const handleAddAchievement = () => {
-    setAchievements((prev) => [...prev, { description: '', isKeyAchievement: false }]);
+    setAchievements([
+      ...achievements,
+      { description: '', isKeyAchievement: false },
+    ]);
   };
 
   const handleRemoveAchievement = (index: number) => {
-    setAchievements((prev) => prev.filter((_, i) => i !== index));
+    setAchievements(achievements.filter((_, i) => i !== index));
   };
 
-  const handleAchievementChange = (index: number, description: string) => {
-    setAchievements((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], description };
-      return updated;
-    });
+  const handleAchievementChange = (index: number, value: string) => {
+    const updated = [...achievements];
+    updated[index] = { ...updated[index], description: value };
+    setAchievements(updated);
   };
 
   const handleKeyAchievementToggle = (index: number) => {
-    setAchievements((prev) =>
-      prev.map((a, i) => ({
-        ...a,
-        isKeyAchievement: i === index ? !a.isKeyAchievement : false,
-      })),
-    );
+    const updated = achievements.map((a, i) => ({
+      ...a,
+      isKeyAchievement: i === index ? !a.isKeyAchievement : false,
+    }));
+    setAchievements(updated);
   };
 
-  // Hour Breakdowns handlers
+  // Hour breakdown handlers
   const handleAddHourBreakdown = () => {
-    setHourBreakdowns((prev) => [
-      ...prev,
-      { taskType: TaskType.DEVELOPMENT, hours: 0 },
+    setHourBreakdowns([
+      ...hourBreakdowns,
+      { taskType: TaskType.OTHER, hours: 0 },
     ]);
   };
 
   const handleRemoveHourBreakdown = (index: number) => {
-    setHourBreakdowns((prev) => prev.filter((_, i) => i !== index));
+    setHourBreakdowns(hourBreakdowns.filter((_, i) => i !== index));
   };
 
-  const handleHourBreakdownChange = <K extends keyof ReportHourBreakdown>(
+  const handleHourBreakdownChange = (
     index: number,
-    field: K,
-    value: ReportHourBreakdown[K],
+    field: keyof ReportHourBreakdown,
+    value: any,
   ) => {
-    setHourBreakdowns((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
+    const updated = [...hourBreakdowns];
+    updated[index] = { ...updated[index], [field]: value };
+    setHourBreakdowns(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    // Validation
     if (!projectId) {
-      setError('Please select a project.');
+      setError('Please select a project');
       return;
     }
-
     if (!weekStart || !weekEnd) {
-      setError('Week start and week end dates are required.');
+      setError('Please select both Week Start and Week End dates');
       return;
     }
-
     if (new Date(weekEnd) < new Date(weekStart)) {
-      setError('Week end date cannot be before week start date.');
+      setError('Week End cannot be earlier than Week Start');
       return;
     }
 
-    // Filter out completely blank tasks / items
-    const cleanedTasks = tasks
-      .filter((t) => t.taskName.trim().length > 0)
-      .map((t) => ({
-        taskName: t.taskName.trim(),
-        priority: t.priority,
-        plannedPercentage: Number(t.plannedPercentage) || 0,
-        actualPercentage: Number(t.actualPercentage) || 0,
-        status: t.status,
-        plannedMinutes: Number(t.plannedMinutes) || 0,
-        spentMinutes: Number(t.spentMinutes) || 0,
-        deliverable: t.deliverable?.trim() || null,
-      }));
-
-    const cleanedNextWeekTasks = nextWeekTasks
-      .filter((n) => n.taskName.trim().length > 0)
-      .map((n) => ({ taskName: n.taskName.trim() }));
-
-    const cleanedBlockers = blockers
-      .filter((b) => b.description.trim().length > 0)
-      .map((b) => ({ description: b.description.trim(), isKeyIssue: !!b.isKeyIssue }));
-
-    const cleanedAchievements = achievements
-      .filter((a) => a.description.trim().length > 0)
-      .map((a) => ({
-        description: a.description.trim(),
-        isKeyAchievement: !!a.isKeyAchievement,
-      }));
-
-    const cleanedHourBreakdowns = hourBreakdowns.map((h) => ({
+    // Filter valid entries
+    const validTasks = tasks.filter((t) => t.taskName.trim() !== '');
+    const validNextWeekTasks = nextWeekTasks.filter(
+      (n) => n.taskName.trim() !== '',
+    );
+    const validBlockers = blockers.filter((b) => b.description.trim() !== '');
+    const validAchievements = achievements.filter(
+      (a) => a.description.trim() !== '',
+    );
+    const validHourBreakdowns = hourBreakdowns.map((h) => ({
       taskType: h.taskType,
       hours: Number(h.hours) || 0,
     }));
@@ -285,515 +282,534 @@ export default function ReportForm({ initialReport, isEdit = false }: ReportForm
       weekStart,
       weekEnd,
       notes: notes.trim() || undefined,
-      tasks: cleanedTasks,
-      nextWeekTasks: cleanedNextWeekTasks,
-      blockers: cleanedBlockers,
-      achievements: cleanedAchievements,
-      hourBreakdowns: cleanedHourBreakdowns,
+      tasks: validTasks,
+      nextWeekTasks: validNextWeekTasks,
+      blockers: validBlockers,
+      achievements: validAchievements,
+      hourBreakdowns: validHourBreakdowns,
     };
 
     setSubmitting(true);
-
     try {
       if (isEdit && initialReport) {
         await reportsApi.updateReport(initialReport.id, payload);
+        navigate(`/reports/${initialReport.id}`);
       } else {
-        await reportsApi.createReport(payload);
+        const created = await reportsApi.createReport(payload);
+        navigate(`/reports/${created.id}`);
       }
-      navigate('/reports/history');
     } catch (err: any) {
-      const message =
+      const msg =
         err?.response?.data?.message || 'Failed to save weekly report.';
-      setError(Array.isArray(message) ? message.join(', ') : message);
+      setError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {error}
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="space-y-6 min-w-0">
+      {error && <ErrorState message={error} />}
 
-      {/* Basic Report Details Card */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-          Report Details
-        </h2>
+      {/* 1. Week Range & Project Selection */}
+      <Card className="min-w-0">
+        <SectionHeader
+          title="Period & Project"
+          description="Specify the reporting date range and assigned project initiative."
+        />
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-              Project *
-            </label>
-            <select
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
+          <FormField label="Assigned Project" htmlFor="project" required>
+            <Select
+              id="project"
+              required
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              required
               disabled={loadingProjects}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white"
             >
-              {loadingProjects ? (
-                <option value="">Loading projects...</option>
-              ) : projects.length === 0 ? (
-                <option value="">No projects available</option>
-              ) : (
-                projects.map((p) => (
-                  <option key={p.id} value={p.id} disabled={!p.isActive}>
-                    {p.name} {!p.isActive ? '(Inactive)' : ''}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
+              <option value="">Select an active project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id} disabled={!p.isActive}>
+                  {p.name} {!p.isActive ? '(Inactive)' : ''}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-              Week Start Date *
-            </label>
-            <input
+          <FormField label="Week Start" htmlFor="weekStart" required>
+            <Input
+              id="weekStart"
               type="date"
               required
               value={weekStart}
               onChange={(e) => setWeekStart(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-              Week End Date *
-            </label>
-            <input
+          <FormField label="Week End" htmlFor="weekEnd" required>
+            <Input
+              id="weekEnd"
               type="date"
               required
               value={weekEnd}
               onChange={(e) => setWeekEnd(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             />
-          </div>
+          </FormField>
         </div>
+      </Card>
 
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-            General Notes / Summary
-          </label>
-          <textarea
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="High-level notes or highlights for the week..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Tasks Completed Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Tasks Completed / Worked On</h2>
-            <p className="text-xs text-gray-500">Track tasks planned vs actual progress and time spent</p>
-          </div>
-          <button
-            type="button"
-            onClick={handleAddTask}
-            className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"
-          >
-            + Add Task
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {tasks.map((task, idx) => (
-            <div
-              key={idx}
-              className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3 relative"
+      {/* 2. Tasks Completed / Worked On */}
+      <Card className="min-w-0">
+        <SectionHeader
+          title="Completed & In-Progress Tasks"
+          description="Log key work items, status, percentage completion, and planned vs. spent minutes."
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddTask}
             >
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Task Name *
-                  </label>
-                  <input
+              + Add Task
+            </Button>
+          }
+        />
+
+        {tasks.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">No tasks added yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {tasks.map((task, idx) => (
+              <div
+                key={idx}
+                className="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-3 min-w-0"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Task #{idx + 1}
+                  </span>
+                  {tasks.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveTask(idx)}
+                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs py-1 px-2"
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="sm:col-span-2">
+                    <FormField label="Task Name" required>
+                      <Input
+                        type="text"
+                        required
+                        value={task.taskName}
+                        onChange={(e) =>
+                          handleTaskChange(idx, 'taskName', e.target.value)
+                        }
+                        placeholder="e.g. Implement authentication middleware"
+                      />
+                    </FormField>
+                  </div>
+
+                  <FormField label="Priority">
+                    <Select
+                      value={task.priority}
+                      onChange={(e) =>
+                        handleTaskChange(
+                          idx,
+                          'priority',
+                          e.target.value as TaskPriority,
+                        )
+                      }
+                    >
+                      <option value={TaskPriority.HIGH}>High</option>
+                      <option value={TaskPriority.MEDIUM}>Medium</option>
+                      <option value={TaskPriority.LOW}>Low</option>
+                    </Select>
+                  </FormField>
+
+                  <FormField label="Status">
+                    <Select
+                      value={task.status}
+                      onChange={(e) =>
+                        handleTaskChange(
+                          idx,
+                          'status',
+                          e.target.value as TaskStatus,
+                        )
+                      }
+                    >
+                      <option value={TaskStatus.TODO}>To Do</option>
+                      <option value={TaskStatus.IN_PROGRESS}>In Progress</option>
+                      <option value={TaskStatus.COMPLETED}>Completed</option>
+                      <option value={TaskStatus.BLOCKED}>Blocked</option>
+                    </Select>
+                  </FormField>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <FormField label="Plan Progress (%)">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={task.plannedPercentage}
+                      onChange={(e) =>
+                        handleTaskChange(
+                          idx,
+                          'plannedPercentage',
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </FormField>
+
+                  <FormField label="Actual Progress (%)">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={task.actualPercentage}
+                      onChange={(e) =>
+                        handleTaskChange(
+                          idx,
+                          'actualPercentage',
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </FormField>
+
+                  <FormField label="Plan Minutes">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={task.plannedMinutes}
+                      onChange={(e) =>
+                        handleTaskChange(
+                          idx,
+                          'plannedMinutes',
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </FormField>
+
+                  <FormField label="Spent Minutes">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={task.spentMinutes}
+                      onChange={(e) =>
+                        handleTaskChange(
+                          idx,
+                          'spentMinutes',
+                          Number(e.target.value),
+                        )
+                      }
+                    />
+                  </FormField>
+                </div>
+
+                <FormField label="Deliverable / Notes (Optional)">
+                  <Input
                     type="text"
-                    required
-                    value={task.taskName}
-                    onChange={(e) => handleTaskChange(idx, 'taskName', e.target.value)}
-                    placeholder="e.g. Implement user registration endpoint"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white"
+                    value={task.deliverable || ''}
+                    onChange={(e) =>
+                      handleTaskChange(idx, 'deliverable', e.target.value)
+                    }
+                    placeholder="PR link, document, release tag..."
                   />
-                </div>
-                {tasks.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTask(idx)}
-                    className="text-xs text-red-600 hover:text-red-800 font-medium pt-7"
-                  >
-                    Remove
-                  </button>
-                )}
+                </FormField>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={task.priority}
-                    onChange={(e) =>
-                      handleTaskChange(idx, 'priority', e.target.value as TaskPriority)
-                    }
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
-                  >
-                    {Object.values(TaskPriority).map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={task.status}
-                    onChange={(e) =>
-                      handleTaskChange(idx, 'status', e.target.value as TaskStatus)
-                    }
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
-                  >
-                    {Object.values(TaskStatus).map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Planned %
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={task.plannedPercentage}
-                    onChange={(e) =>
-                      handleTaskChange(idx, 'plannedPercentage', Number(e.target.value))
-                    }
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Actual %
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={task.actualPercentage}
-                    onChange={(e) =>
-                      handleTaskChange(idx, 'actualPercentage', Number(e.target.value))
-                    }
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Planned (Mins)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={task.plannedMinutes}
-                    onChange={(e) =>
-                      handleTaskChange(idx, 'plannedMinutes', Number(e.target.value))
-                    }
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Spent (Mins)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={task.spentMinutes}
-                    onChange={(e) =>
-                      handleTaskChange(idx, 'spentMinutes', Number(e.target.value))
-                    }
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Deliverable / PR / Link (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={task.deliverable || ''}
-                  onChange={(e) => handleTaskChange(idx, 'deliverable', e.target.value)}
-                  placeholder="e.g. PR #104 or Figma link"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Next Week Tasks Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Next Week Planned Tasks</h2>
-            <p className="text-xs text-gray-500">Key goals planned for next week</p>
+            ))}
           </div>
-          <button
-            type="button"
-            onClick={handleAddNextWeekTask}
-            className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"
-          >
-            + Add Planned Task
-          </button>
-        </div>
+        )}
+      </Card>
+
+      {/* 3. Next Week Planned Tasks */}
+      <Card className="min-w-0">
+        <SectionHeader
+          title="Next Week Planned Commitments"
+          description="Outline key deliverables planned for the upcoming week."
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddNextWeekTask}
+            >
+              + Add Next Week Task
+            </Button>
+          }
+        />
 
         <div className="space-y-3">
           {nextWeekTasks.map((nt, idx) => (
-            <div key={idx} className="flex items-center gap-3">
-              <input
+            <div key={idx} className="flex items-center gap-2.5 min-w-0">
+              <Input
                 type="text"
                 value={nt.taskName}
-                onChange={(e) => handleNextWeekTaskChange(idx, e.target.value)}
-                placeholder="e.g. Begin integration testing on payment gateway"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm"
+                onChange={(e) =>
+                  handleNextWeekTaskChange(idx, e.target.value)
+                }
+                placeholder="Planned task description..."
+                className="flex-1"
               />
               {nextWeekTasks.length > 1 && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleRemoveNextWeekTask(idx)}
-                  className="text-xs text-red-600 hover:text-red-800 font-medium px-2"
+                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 shrink-0"
                 >
-                  Remove
-                </button>
+                  ✕
+                </Button>
               )}
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
-      {/* Blockers & Key Issue Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Blockers & Challenges</h2>
-            <p className="text-xs text-gray-500">
-              List blockers (select at most one as the <strong>Key Issue</strong>)
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleAddBlocker}
-            className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"
-          >
-            + Add Blocker
-          </button>
-        </div>
+      {/* 4. Blockers & Challenges */}
+      <Card className="min-w-0">
+        <SectionHeader
+          title="Blockers & Impediments"
+          description="Log any blockers encountered (select at most one as the Key Issue)."
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddBlocker}
+            >
+              + Add Blocker
+            </Button>
+          }
+        />
 
         {blockers.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No blockers recorded for this week.</p>
+          <p className="text-xs text-slate-400 italic">No blockers recorded.</p>
         ) : (
           <div className="space-y-3">
             {blockers.map((blocker, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-4 p-3 bg-gray-50 rounded-md border border-gray-200"
+                className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
-                <div className="flex-1">
-                  <input
+                <div className="flex-1 min-w-0">
+                  <Input
                     type="text"
                     value={blocker.description}
-                    onChange={(e) => handleBlockerChange(idx, e.target.value)}
+                    onChange={(e) =>
+                      handleBlockerChange(idx, 'description', e.target.value)
+                    }
                     placeholder="Describe the blocker or bottleneck..."
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm bg-white"
                   />
                 </div>
-                <label className="flex items-center space-x-2 text-xs text-gray-700 font-medium shrink-0 pt-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={blocker.isKeyIssue}
-                    onChange={() => handleKeyIssueToggle(idx)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                  />
-                  <span>Key Issue</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveBlocker(idx)}
-                  className="text-xs text-red-600 hover:text-red-800 font-medium pt-2"
-                >
-                  Remove
-                </button>
+
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <label className="flex items-center gap-1.5 text-xs text-slate-700 font-medium cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={blocker.isKeyIssue}
+                      onChange={() => handleKeyIssueToggle(idx)}
+                      className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 h-4 w-4"
+                    />
+                    <span>Key Blocker</span>
+                  </label>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveBlocker(idx)}
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2"
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Achievements & Key Achievement Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Key Achievements</h2>
-            <p className="text-xs text-gray-500">
-              List major wins (select at most one as the <strong>Key Achievement</strong>)
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleAddAchievement}
-            className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"
-          >
-            + Add Achievement
-          </button>
-        </div>
+      {/* 5. Key Achievements */}
+      <Card className="min-w-0">
+        <SectionHeader
+          title="Key Achievements"
+          description="Highlight milestone completions and wins (select at most one as Key Achievement)."
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddAchievement}
+            >
+              + Add Achievement
+            </Button>
+          }
+        />
 
         {achievements.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No achievements recorded for this week.</p>
+          <p className="text-xs text-slate-400 italic">No achievements recorded.</p>
         ) : (
           <div className="space-y-3">
             {achievements.map((achievement, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-4 p-3 bg-gray-50 rounded-md border border-gray-200"
+                className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
-                <div className="flex-1">
-                  <input
+                <div className="flex-1 min-w-0">
+                  <Input
                     type="text"
                     value={achievement.description}
-                    onChange={(e) => handleAchievementChange(idx, e.target.value)}
+                    onChange={(e) =>
+                      handleAchievementChange(idx, e.target.value)
+                    }
                     placeholder="Describe the milestone or achievement..."
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm bg-white"
                   />
                 </div>
-                <label className="flex items-center space-x-2 text-xs text-gray-700 font-medium shrink-0 pt-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={achievement.isKeyAchievement}
-                    onChange={() => handleKeyAchievementToggle(idx)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                  />
-                  <span>Key Achievement</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAchievement(idx)}
-                  className="text-xs text-red-600 hover:text-red-800 font-medium pt-2"
-                >
-                  Remove
-                </button>
+
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <label className="flex items-center gap-1.5 text-xs text-slate-700 font-medium cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={achievement.isKeyAchievement}
+                      onChange={() => handleKeyAchievementToggle(idx)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    />
+                    <span>Key Achievement</span>
+                  </label>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveAchievement(idx)}
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2"
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Hour Breakdown Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Hour Breakdown by Activity</h2>
-            <p className="text-xs text-gray-500">Distribution of hours across activity types</p>
-          </div>
-          <button
-            type="button"
-            onClick={handleAddHourBreakdown}
-            className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"
-          >
-            + Add Breakdown Row
-          </button>
-        </div>
+      {/* 6. Hour Breakdown */}
+      <Card className="min-w-0">
+        <SectionHeader
+          title="Hour Breakdown by Activity"
+          description="Distribution of hours logged across activity categories."
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddHourBreakdown}
+            >
+              + Add Category
+            </Button>
+          }
+        />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 min-w-0">
           {hourBreakdowns.map((hb, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-3 p-3 bg-gray-50 rounded-md border border-gray-200"
+              className="flex items-center gap-2.5 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 min-w-0"
             >
-              <div className="flex-1">
-                <select
+              <div className="flex-1 min-w-0">
+                <Select
                   value={hb.taskType}
                   onChange={(e) =>
-                    handleHourBreakdownChange(idx, 'taskType', e.target.value as TaskType)
+                    handleHourBreakdownChange(
+                      idx,
+                      'taskType',
+                      e.target.value as TaskType,
+                    )
                   }
-                  className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white"
                 >
                   {Object.values(TaskType).map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
-              <div className="w-24">
-                <input
+
+              <div className="w-24 shrink-0">
+                <Input
                   type="number"
                   step="0.5"
                   min={0}
                   value={hb.hours}
                   onChange={(e) =>
-                    handleHourBreakdownChange(idx, 'hours', Number(e.target.value))
+                    handleHourBreakdownChange(
+                      idx,
+                      'hours',
+                      Number(e.target.value),
+                    )
                   }
-                  className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs bg-white text-right"
-                  placeholder="Hours"
+                  className="text-right"
+                  placeholder="0.0"
                 />
               </div>
-              <span className="text-xs text-gray-500">hrs</span>
+
+              <span className="text-xs text-slate-500 font-medium shrink-0">
+                hrs
+              </span>
+
               {hourBreakdowns.length > 1 && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleRemoveHourBreakdown(idx)}
-                  className="text-xs text-red-600 hover:text-red-800 font-medium px-1"
+                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-1.5 shrink-0"
                 >
                   ✕
-                </button>
+                </Button>
               )}
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
-      {/* Action Buttons */}
-      <div className="flex justify-end items-center gap-4 pt-4 border-t border-gray-200">
-        <button
-          type="button"
+      {/* 7. Notes & Summary */}
+      <Card className="min-w-0">
+        <SectionHeader
+          title="Weekly Summary & Notes"
+          description="General overview or context for the reviewer."
+        />
+
+        <FormField label="Summary Notes" htmlFor="notes">
+          <Textarea
+            id="notes"
+            rows={4}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add any overall context, blockers clarification, or comments for the weekly review..."
+          />
+        </FormField>
+      </Card>
+
+      {/* 8. Action Footer */}
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <Button
+          variant="outline"
+          size="md"
           onClick={() => navigate('/reports/history')}
-          className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 shadow-sm transition-colors"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          disabled={submitting}
-          className="px-6 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+          variant="primary"
+          size="md"
+          isLoading={submitting}
         >
-          {submitting ? 'Saving...' : isEdit ? 'Update Report Draft' : 'Save Report Draft'}
-        </button>
+          {isEdit ? 'Update Report Draft' : 'Save Report Draft'}
+        </Button>
       </div>
     </form>
   );

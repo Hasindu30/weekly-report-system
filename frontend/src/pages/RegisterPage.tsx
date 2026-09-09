@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Card, Button, FormField, Input } from '../components/ui';
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState('');
@@ -43,104 +44,109 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 w-full max-w-md">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
-      <p className="text-sm text-gray-600 mb-6">Register to submit and manage weekly reports</p>
+    <Card className="shadow-md">
+      <div className="space-y-1 mb-6">
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Create Account</h1>
+        <p className="text-xs text-slate-500">
+          Register to author and manage weekly reports with your team.
+        </p>
+      </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md">
+        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              First Name
-            </label>
-            <input
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="First Name" htmlFor="firstName" required>
+            <Input
+              id="firstName"
               type="text"
               required
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-              placeholder="John"
+              placeholder="Alice"
+              autoComplete="given-name"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Last Name
-            </label>
-            <input
+          </FormField>
+
+          <FormField label="Last Name" htmlFor="lastName" required>
+            <Input
+              id="lastName"
               type="text"
               required
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-              placeholder="Doe"
+              placeholder="Smith"
+              autoComplete="family-name"
             />
-          </div>
+          </FormField>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address
-          </label>
-          <input
+        <FormField label="Email Address" htmlFor="email" required>
+          <Input
+            id="email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-            placeholder="name@company.com"
+            placeholder="alice.smith@example.com"
+            autoComplete="email"
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Password (min 8 chars)
-          </label>
-          <input
+        <FormField
+          label="Password"
+          htmlFor="password"
+          helperText="Minimum 8 characters"
+          required
+        >
+          <Input
+            id="password"
             type="password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             placeholder="••••••••"
+            autoComplete="new-password"
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Confirm Password
-          </label>
-          <input
+        <FormField label="Confirm Password" htmlFor="confirmPassword" required>
+          <Input
+            id="confirmPassword"
             type="password"
             required
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             placeholder="••••••••"
+            autoComplete="new-password"
           />
-        </div>
+        </FormField>
 
-        <button
+        <Button
           type="submit"
-          disabled={isSubmitting}
-          className="w-full py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+          variant="primary"
+          size="md"
+          isLoading={isSubmitting}
+          className="w-full mt-2"
         >
-          {isSubmitting ? 'Creating account...' : 'Register'}
-        </button>
+          Create Account
+        </Button>
       </form>
 
-      <div className="mt-6 text-center text-sm text-gray-600">
+      <div className="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link
+          to="/login"
+          className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+        >
           Sign in
         </Link>
       </div>
-    </div>
+    </Card>
   );
 }

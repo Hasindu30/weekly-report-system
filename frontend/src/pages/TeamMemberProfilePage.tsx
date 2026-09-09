@@ -1,61 +1,73 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import type { TeamMemberProfileResponse } from '../types';
 import { teamMembersApi } from '../api/team-members';
 import StatusBadge from '../components/StatusBadge';
+import {
+  PageHeader,
+  MetricCard,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  DataTable,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  Button,
+  ErrorState,
+  LoadingState,
+  EmptyState,
+} from '../components/ui';
 
 export default function TeamMemberProfilePage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   const [profile, setProfile] = useState<TeamMemberProfileResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadProfile() {
-      if (!id) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await teamMembersApi.getProfile(id);
-        setProfile(data);
-      } catch (err: any) {
-        setError(
-          err?.response?.data?.message || 'Failed to load team member profile.',
-        );
-      } finally {
-        setLoading(false);
-      }
+  const loadProfile = async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await teamMembersApi.getProfile(id);
+      setProfile(data);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message || 'Failed to load team member profile.',
+      );
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadProfile();
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-sm text-gray-500 font-medium">Loading profile...</span>
-        </div>
-      </div>
-    );
+    return <LoadingState message="Loading team member profile..." />;
   }
 
   if (error || !profile) {
     return (
-      <div className="space-y-4">
-        <div className="p-6 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex flex-col items-start space-y-3">
-          <div className="font-semibold text-base">Error Loading Profile</div>
-          <p>{error || 'Member not found.'}</p>
-          <button
-            type="button"
-            onClick={() => navigate('/manager/reports')}
-            className="px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700 transition cursor-pointer"
-          >
-            ← Back to Team Reports
-          </button>
+      <div className="space-y-4 min-w-0">
+        <ErrorState
+          title="Profile Not Found"
+          message={error || 'Unable to retrieve team member details.'}
+          onRetry={loadProfile}
+        />
+        <div>
+          <Link to="/manager/reports">
+            <Button variant="outline" size="sm">
+              ← Back to Team Reports
+            </Button>
+          </Link>
         </div>
       </div>
     );
@@ -64,161 +76,170 @@ export default function TeamMemberProfilePage() {
   const { user, summary, recentReports } = profile;
 
   return (
-    <div className="space-y-6">
-      {/* Back button & Breadcrumbs */}
-      <div className="flex items-center space-x-2 text-sm text-gray-500">
-        <Link
-          to="/manager/reports"
-          className="text-indigo-600 hover:text-indigo-800 font-medium flex items-center space-x-1"
-        >
-          <span>← Team Reports</span>
-        </Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">
-          {user.firstName} {user.lastName}
-        </span>
-      </div>
+    <div className="space-y-6 min-w-0">
+      {/* 1. Page Header with Back Link */}
+      <PageHeader
+        backLink={{
+          to: '/manager/reports',
+          label: 'Team Reports',
+        }}
+        title={`${user.firstName} ${user.lastName}`}
+        description={`Team member performance profile and historical submission log for ${user.email}.`}
+        badge={<StatusBadge status={user.role} size="sm" />}
+      />
 
-      {/* Member Profile Header Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-2xl">
-            {user.firstName?.[0]}
-            {user.lastName?.[0]}
-          </div>
-          <div>
-            <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {user.firstName} {user.lastName}
-              </h1>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                {user.role}
-              </span>
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                  user.isActive !== false
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}
-              >
-                {user.isActive !== false ? 'Active' : 'Inactive'}
-              </span>
+      {/* 2. Member Overview Card */}
+      <Card className="min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg shrink-0">
+              {user.firstName?.[0]}
+              {user.lastName?.[0]}
             </div>
-            <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-base text-slate-900 truncate">
+                  {user.firstName} {user.lastName}
+                </span>
+                <StatusBadge
+                  status={user.isActive !== false ? 'ACTIVE' : 'INACTIVE'}
+                  size="sm"
+                />
+              </div>
+              <p className="text-xs text-slate-500 truncate">{user.email}</p>
+            </div>
+          </div>
+
+          <div className="text-xs text-slate-400 sm:text-right">
+            Member since:{' '}
+            <span className="font-medium text-slate-600">
+              {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
+            </span>
           </div>
         </div>
+      </Card>
 
-        <div className="text-xs text-gray-500 md:text-right">
-          <div>Member since: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}</div>
-        </div>
-      </div>
-
-      {/* Summary Metrics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-gray-500 font-medium">Total Reports</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{summary.totalReports}</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-emerald-600 font-medium">Approved</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1">{summary.approvedReports}</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-amber-600 font-medium">Needs Correction</div>
-          <div className="text-2xl font-bold text-amber-700 mt-1">{summary.needsCorrectionReports}</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-gray-500 font-medium">Latest Status</div>
-          <div className="mt-2">
-            {summary.currentReportStatus ? (
-              <StatusBadge status={summary.currentReportStatus} />
+      {/* 3. Summary Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4 min-w-0">
+        <MetricCard
+          label="Total Reports"
+          value={summary.totalReports}
+          subtext="Submissions"
+          tone="neutral"
+        />
+        <MetricCard
+          label="Approved"
+          value={summary.approvedReports}
+          subtext="Accepted"
+          tone="emerald"
+        />
+        <MetricCard
+          label="Needs Correction"
+          value={summary.needsCorrectionReports}
+          subtext="Revisions"
+          tone={summary.needsCorrectionReports > 0 ? 'amber' : 'neutral'}
+        />
+        <MetricCard
+          label="Latest Status"
+          value={
+            summary.currentReportStatus ? (
+              <StatusBadge status={summary.currentReportStatus} size="sm" />
             ) : (
-              <span className="text-xs text-gray-400 font-medium">No Reports</span>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-indigo-600 font-medium">Completed Tasks</div>
-          <div className="text-2xl font-bold text-indigo-700 mt-1">{summary.totalCompletedTasks}</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-rose-600 font-medium">Total Blockers</div>
-          <div className="text-2xl font-bold text-rose-700 mt-1">{summary.totalBlockers}</div>
-        </div>
+              'None'
+            )
+          }
+          subtext="Most recent"
+          tone="neutral"
+        />
+        <MetricCard
+          label="Completed Tasks"
+          value={summary.totalCompletedTasks}
+          subtext="Lifetime tasks"
+          tone="indigo"
+        />
+        <MetricCard
+          label="Total Blockers"
+          value={summary.totalBlockers}
+          subtext="Encountered"
+          tone={summary.totalBlockers > 0 ? 'rose' : 'neutral'}
+        />
       </div>
 
-      {/* Recent Weekly Reports */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-200">
-          <h2 className="text-base font-bold text-gray-900">Recent Weekly Reports</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            History of reports submitted by {user.firstName} {user.lastName}.
-          </p>
-        </div>
-
-        {recentReports.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="text-gray-400 text-4xl">📄</div>
-            <h3 className="text-base font-semibold text-gray-900">No Reports Yet</h3>
-            <p className="text-sm text-gray-500 max-w-sm mx-auto">
-              This team member has not created or submitted any weekly reports yet.
-            </p>
+      {/* 4. Recent Weekly Reports Table */}
+      <Card padding="none" className="min-w-0 overflow-hidden">
+        <CardHeader className="p-5 border-b border-slate-100 mb-0">
+          <div>
+            <CardTitle>Recent Weekly Reports</CardTitle>
+            <CardDescription>
+              Chronological submission history authored by {user.firstName}.
+            </CardDescription>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-700 border-b border-gray-200">
+          <div className="text-xs font-medium text-slate-500">
+            {recentReports.length} reports logged
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {recentReports.length === 0 ? (
+            <EmptyState
+              icon="📄"
+              title="No reports logged"
+              description="This team member has not authored or submitted any weekly reports yet."
+            />
+          ) : (
+            <DataTable className="border-none shadow-none rounded-none">
+              <TableHead>
                 <tr>
-                  <th className="py-3.5 px-6">Week Range</th>
-                  <th className="py-3.5 px-6">Project</th>
-                  <th className="py-3.5 px-6">Status</th>
-                  <th className="py-3.5 px-6">Hours Spent</th>
-                  <th className="py-3.5 px-6">Submitted At</th>
-                  <th className="py-3.5 px-6">Approved At</th>
-                  <th className="py-3.5 px-6 text-right">Action</th>
+                  <TableHeaderCell>Week Range</TableHeaderCell>
+                  <TableHeaderCell>Project</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>Hours Spent</TableHeaderCell>
+                  <TableHeaderCell>Submitted Date</TableHeaderCell>
+                  <TableHeaderCell>Approved Date</TableHeaderCell>
+                  <TableHeaderCell align="right">Action</TableHeaderCell>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
+              </TableHead>
+              <TableBody>
                 {recentReports.map((report) => (
-                  <tr key={report.id} className="hover:bg-gray-50/75 transition-colors">
-                    <td className="py-4 px-6 text-gray-900 font-medium whitespace-nowrap">
+                  <TableRow key={report.id}>
+                    <TableCell className="font-semibold text-slate-900">
                       {report.weekStart} – {report.weekEnd}
-                    </td>
-                    <td className="py-4 px-6 text-gray-800 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="font-medium text-slate-800">
                       {report.project?.name || '—'}
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <StatusBadge status={report.status} />
-                    </td>
-                    <td className="py-4 px-6 text-gray-700 font-medium whitespace-nowrap">
-                      {report.totalHoursSpent !== undefined ? `${report.totalHoursSpent} hrs` : '—'}
-                    </td>
-                    <td className="py-4 px-6 text-gray-500 whitespace-nowrap">
-                      {report.submittedAt ? new Date(report.submittedAt).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="py-4 px-6 text-gray-500 whitespace-nowrap">
-                      {report.approvedAt ? new Date(report.approvedAt).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="py-4 px-6 text-right whitespace-nowrap">
-                      <Link
-                        to={`/manager/reports/${report.id}`}
-                        className="font-semibold px-3 py-1.5 rounded-md text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-                      >
-                        View / Review
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={report.status} size="sm" />
+                    </TableCell>
+                    <TableCell className="font-medium text-slate-700">
+                      {report.totalHoursSpent !== undefined
+                        ? `${report.totalHoursSpent} hrs`
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-slate-500">
+                      {report.submittedAt
+                        ? new Date(report.submittedAt).toLocaleDateString()
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-slate-500">
+                      {report.approvedAt
+                        ? new Date(report.approvedAt).toLocaleDateString()
+                        : '—'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Link to={`/manager/reports/${report.id}`}>
+                        <Button variant="outline" size="sm">
+                          Review Report
+                        </Button>
                       </Link>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </TableBody>
+            </DataTable>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

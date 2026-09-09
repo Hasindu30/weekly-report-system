@@ -18,6 +18,19 @@ import {
 import type { ManagerDashboardData } from '../types';
 import { dashboardApi } from '../api/dashboard';
 import StatusBadge from '../components/StatusBadge';
+import {
+  PageHeader,
+  MetricCard,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Button,
+  ErrorState,
+  LoadingState,
+  EmptyState,
+} from '../components/ui';
 
 // Helper date functions
 function getMondayOfCurrentWeek(): string {
@@ -41,11 +54,11 @@ function addDays(dateStr: string, days: number): string {
 }
 
 const TASK_TYPE_COLORS: Record<string, string> = {
-  DEVELOPMENT: '#6366f1', // Indigo
-  TESTING: '#06b6d4', // Cyan
-  MEETINGS: '#f59e0b', // Amber
-  DOCUMENTATION: '#10b981', // Emerald
-  OTHER: '#8b5cf6', // Violet
+  DEVELOPMENT: '#4f46e5', // Indigo
+  TESTING: '#0284c7', // Sky
+  MEETINGS: '#d97706', // Amber
+  DOCUMENTATION: '#059669', // Emerald
+  OTHER: '#7c3aed', // Violet
 };
 
 export default function ManagerDashboardPage() {
@@ -84,255 +97,151 @@ export default function ManagerDashboardPage() {
   };
 
   if (loading && !dashboardData) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-sm text-gray-500 font-medium">Loading manager dashboard...</span>
-        </div>
-      </div>
-    );
+    return <LoadingState message="Loading manager analytics..." />;
   }
 
-  if (error && !dashboardData) {
-    return (
-      <div className="bg-white p-8 rounded-lg border border-red-200 text-center space-y-4 shadow-sm max-w-lg mx-auto mt-8">
-        <div className="text-red-600 font-medium">{error}</div>
-        <button
-          type="button"
-          onClick={loadDashboard}
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 shadow-sm cursor-pointer"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  const {
+    summary,
+    submissionStatusByMember = [],
+    workloadByProject = [],
+    timeByTaskType = [],
+    tasksCompletedTrend = [],
+    recentActivity = [],
+  } = dashboardData || {};
 
-  const summary = dashboardData?.summary;
-  const submissionStatusByMember = dashboardData?.submissionStatusByMember || [];
-  const workloadByProject = dashboardData?.workloadByProject || [];
-  const timeByTaskType = dashboardData?.timeByTaskType || [];
-  const tasksCompletedTrend = dashboardData?.tasksCompletedTrend || [];
-  const recentActivity = dashboardData?.recentActivity || [];
-
-  const totalHours = timeByTaskType.reduce((acc, curr) => acc + (curr.hours || 0), 0);
-  const totalTasks = workloadByProject.reduce((acc, curr) => acc + (curr.taskCount || 0), 0);
+  const totalTasks = workloadByProject.reduce((sum, p) => sum + p.taskCount, 0);
+  const totalHours = timeByTaskType.reduce((sum, t) => sum + t.hours, 0);
   const totalCompletedTrendTasks = tasksCompletedTrend.reduce(
-    (acc, curr) => acc + (curr.completedTasks || 0),
+    (sum, t) => sum + t.completedTasks,
     0,
   );
 
   return (
-    <div className="space-y-8">
-      {/* Top Header & Week Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manager Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Weekly team progress, compliance rate, workload distribution, and review activity.
-          </p>
-        </div>
+    <div className="space-y-6 min-w-0">
+      {/* 1. Page Header with Week Controls */}
+      <PageHeader
+        title="Manager Dashboard"
+        description="Weekly reporting metrics, submission compliance, workload analytics, and team activities."
+        actions={
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1 shadow-xs flex-wrap">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePrevWeek}
+              title="Previous Week"
+            >
+              ←
+            </Button>
 
-        {/* Selected Week Controls */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={handlePrevWeek}
-            title="Previous Week"
-            className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-300 rounded hover:bg-gray-100 cursor-pointer"
-          >
-            ← Prev
-          </button>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="date"
-              value={selectedWeek}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setSelectedWeek(e.target.value);
-                }
-              }}
-              className="text-xs font-medium border border-gray-300 rounded py-1.5 px-2.5 bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            {summary && (
-              <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
-                to {summary.selectedWeekEnd}
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 px-2">
+              <input
+                type="date"
+                value={selectedWeek}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedWeek(e.target.value);
+                  }
+                }}
+                className="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer"
+              />
+              {summary && (
+                <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
+                  to {summary.selectedWeekEnd}
+                </span>
+              )}
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleNextWeek}
+              title="Next Week"
+            >
+              →
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCurrentWeek}
+              className="text-xs"
+            >
+              This Week
+            </Button>
           </div>
-          <button
-            type="button"
-            onClick={handleNextWeek}
-            title="Next Week"
-            className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-300 rounded hover:bg-gray-100 cursor-pointer"
-          >
-            Next →
-          </button>
-          <button
-            type="button"
-            onClick={handleCurrentWeek}
-            className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 cursor-pointer"
-          >
-            This Week
-          </button>
-        </div>
-      </div>
+        }
+      />
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex items-center justify-between">
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={loadDashboard}
-            className="text-xs font-bold underline ml-4 hover:text-red-900"
-          >
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={loadDashboard} />}
 
-      {/* 1. Summary Metric Cards */}
+      {/* 2. Executive Metric Cards */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {/* Reports Submitted */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-1">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Submitted
-            </div>
-            <div className="text-2xl font-bold text-gray-900">
-              {summary.reportsSubmitted}{' '}
-              <span className="text-xs font-normal text-gray-400">
-                / {summary.totalTeamMembers}
-              </span>
-            </div>
-            <div className="text-xs text-gray-400">Total team members: {summary.totalTeamMembers}</div>
-          </div>
-
-          {/* Submission Compliance */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-1">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Compliance
-            </div>
-            <div className="text-2xl font-bold text-indigo-600">
-              {summary.submissionComplianceRate}%
-            </div>
-            <div className="text-xs text-gray-400">Submission rate</div>
-          </div>
-
-          {/* Pending Reports */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-1">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Pending
-            </div>
-            <div className="text-2xl font-bold text-blue-600">
-              {summary.pendingReports}
-            </div>
-            <div className="text-xs text-gray-400">Awaiting submission</div>
-          </div>
-
-          {/* Late Reports */}
-          <div
-            className={`p-4 rounded-lg border shadow-sm space-y-1 ${
-              summary.lateReports > 0
-                ? 'bg-rose-50 border-rose-200 text-rose-900'
-                : 'bg-white border-gray-200'
-            }`}
-          >
-            <div
-              className={`text-xs font-medium uppercase tracking-wider ${
-                summary.lateReports > 0 ? 'text-rose-700' : 'text-gray-500'
-              }`}
-            >
-              Late Reports
-            </div>
-            <div
-              className={`text-2xl font-bold ${
-                summary.lateReports > 0 ? 'text-rose-700' : 'text-gray-900'
-              }`}
-            >
-              {summary.lateReports}
-            </div>
-            <div className="text-xs text-gray-400">Past deadline</div>
-          </div>
-
-          {/* Needs Correction */}
-          <div
-            className={`p-4 rounded-lg border shadow-sm space-y-1 ${
-              summary.needsCorrection > 0
-                ? 'bg-amber-50 border-amber-200 text-amber-900'
-                : 'bg-white border-gray-200'
-            }`}
-          >
-            <div
-              className={`text-xs font-medium uppercase tracking-wider ${
-                summary.needsCorrection > 0 ? 'text-amber-700' : 'text-gray-500'
-              }`}
-            >
-              Correction
-            </div>
-            <div
-              className={`text-2xl font-bold ${
-                summary.needsCorrection > 0 ? 'text-amber-700' : 'text-gray-900'
-              }`}
-            >
-              {summary.needsCorrection}
-            </div>
-            <div className="text-xs text-gray-400">Changes requested</div>
-          </div>
-
-          {/* Open Blockers */}
-          <div
-            className={`p-4 rounded-lg border shadow-sm space-y-1 ${
-              summary.openBlockers > 0
-                ? 'bg-red-50 border-red-200 text-red-900'
-                : 'bg-white border-gray-200'
-            }`}
-          >
-            <div
-              className={`text-xs font-medium uppercase tracking-wider ${
-                summary.openBlockers > 0 ? 'text-red-700' : 'text-gray-500'
-              }`}
-            >
-              Blockers
-            </div>
-            <div
-              className={`text-2xl font-bold ${
-                summary.openBlockers > 0 ? 'text-red-700' : 'text-gray-900'
-              }`}
-            >
-              {summary.openBlockers}
-            </div>
-            <div className="text-xs text-gray-400">Team obstacles</div>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4 min-w-0">
+          <MetricCard
+            label="Submitted"
+            value={`${summary.reportsSubmitted} / ${summary.totalTeamMembers}`}
+            subtext="Total submissions"
+            tone="neutral"
+          />
+          <MetricCard
+            label="Compliance"
+            value={`${summary.submissionComplianceRate}%`}
+            subtext="On-time rate"
+            tone="indigo"
+          />
+          <MetricCard
+            label="Pending"
+            value={summary.pendingReports}
+            subtext="Awaiting review"
+            tone="sky"
+          />
+          <MetricCard
+            label="Late Reports"
+            value={summary.lateReports}
+            subtext="Past deadline"
+            tone={summary.lateReports > 0 ? 'rose' : 'neutral'}
+          />
+          <MetricCard
+            label="Correction"
+            value={summary.needsCorrection}
+            subtext="Changes requested"
+            tone={summary.needsCorrection > 0 ? 'amber' : 'neutral'}
+          />
+          <MetricCard
+            label="Blockers"
+            value={summary.openBlockers}
+            subtext="Reported issues"
+            tone={summary.openBlockers > 0 ? 'rose' : 'neutral'}
+          />
         </div>
       )}
 
-      {/* 2. Charts Section: Tasks Completed Trend & Workload by Project */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tasks Completed Trend */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-900">
-              Tasks Completed Trend (8 Weeks)
-            </h2>
-            <span className="text-xs text-gray-500 font-medium">Team-wide completion</span>
+      {/* 3. Primary Insights: Trend Chart */}
+      <Card className="min-w-0">
+        <CardHeader>
+          <div>
+            <CardTitle>Tasks Completed Trend</CardTitle>
+            <CardDescription>
+              Completed task velocity across the last 8 weeks.
+            </CardDescription>
           </div>
-
-          <div className="h-64 w-full">
+          <div className="text-xs font-medium text-slate-500">
+            Total: {totalCompletedTrendTasks} tasks
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 w-full min-w-0">
             {totalCompletedTrendTasks === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                <span className="text-2xl mb-1">📈</span>
-                <p className="text-sm font-medium text-gray-600">No completed tasks recorded</p>
-                <p className="text-xs text-gray-400">
-                  Completed tasks across the last 8 weeks will appear here.
-                </p>
-              </div>
+              <EmptyState
+                icon="📈"
+                title="No completed tasks recorded"
+                description="Completed tasks across past weeks will appear here once logged."
+              />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={tasksCompletedTrend}
-                  margin={{ top: 10, right: 20, left: -10, bottom: 0 }}
+                  margin={{ top: 10, right: 20, left: -15, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis
@@ -351,8 +260,9 @@ export default function ManagerDashboardPage() {
                     contentStyle={{
                       backgroundColor: '#ffffff',
                       border: '1px solid #e2e8f0',
-                      borderRadius: '0.375rem',
+                      borderRadius: '0.5rem',
                       fontSize: '12px',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
                     }}
                     formatter={(value: any) => [`${value} tasks`, 'Completed']}
                     labelFormatter={(label: any) => `Week of ${label}`}
@@ -362,229 +272,233 @@ export default function ManagerDashboardPage() {
                     dataKey="completedTasks"
                     stroke="#4f46e5"
                     strokeWidth={2.5}
-                    dot={{ r: 4, fill: '#4f46e5' }}
-                    activeDot={{ r: 6 }}
+                    dot={{ r: 3.5, fill: '#4f46e5' }}
+                    activeDot={{ r: 5 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
+      {/* 4. Secondary Insights: Workload by Project & Time by Task Type */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
         {/* Workload by Project */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-900">
-              Workload by Project
-            </h2>
-            <span className="text-xs text-gray-500 font-medium">Active week tasks</span>
-          </div>
+        <Card className="min-w-0">
+          <CardHeader>
+            <div>
+              <CardTitle>Workload by Project</CardTitle>
+              <CardDescription>
+                Tasks submitted across active projects this week.
+              </CardDescription>
+            </div>
+            <div className="text-xs font-medium text-slate-500">
+              {totalTasks} total tasks
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 w-full min-w-0">
+              {workloadByProject.length === 0 || totalTasks === 0 ? (
+                <EmptyState
+                  icon="📊"
+                  title="No project tasks logged"
+                  description="Tasks for the selected week will be displayed here."
+                />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={workloadByProject}
+                    margin={{ top: 10, right: 20, left: -15, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="projectName"
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#e2e8f0' }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#e2e8f0' }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '0.5rem',
+                        fontSize: '12px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
+                      }}
+                      formatter={(value: any) => [`${value} tasks`, 'Task Count']}
+                    />
+                    <Bar dataKey="taskCount" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="h-64 w-full">
-            {workloadByProject.length === 0 || totalTasks === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                <span className="text-2xl mb-1">📊</span>
-                <p className="text-sm font-medium text-gray-600">No project tasks logged</p>
-                <p className="text-xs text-gray-400">
-                  Tasks submitted for the selected week will be displayed here.
-                </p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={workloadByProject}
-                  margin={{ top: 10, right: 20, left: -10, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis
-                    dataKey="projectName"
-                    tick={{ fontSize: 11, fill: '#64748b' }}
-                    tickLine={false}
-                    axisLine={{ stroke: '#e2e8f0' }}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
-                    tickLine={false}
-                    axisLine={{ stroke: '#e2e8f0' }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '0.375rem',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: any) => [`${value} tasks`, 'Task Count']}
-                  />
-                  <Bar dataKey="taskCount" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+        {/* Time by Task Type */}
+        <Card className="min-w-0">
+          <CardHeader>
+            <div>
+              <CardTitle>Time by Task Type</CardTitle>
+              <CardDescription>
+                Categorical hours breakdown across teams.
+              </CardDescription>
+            </div>
+            <div className="text-xs font-medium text-slate-500">
+              Total: {totalHours} hrs
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 w-full min-w-0">
+              {totalHours === 0 ? (
+                <EmptyState
+                  icon="⏱️"
+                  title="No hours logged"
+                  description="Hour breakdowns logged across task categories will appear here."
+                />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={timeByTaskType}
+                      dataKey="hours"
+                      nameKey="taskType"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={75}
+                      innerRadius={45}
+                      paddingAngle={3}
+                    >
+                      {timeByTaskType.map((entry) => (
+                        <Cell
+                          key={entry.taskType}
+                          fill={TASK_TYPE_COLORS[entry.taskType] || '#64748b'}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '0.5rem',
+                        fontSize: '12px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
+                      }}
+                      formatter={(value: any) => [`${value} hrs`, 'Logged Time']}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      formatter={(value) => (
+                        <span className="text-[11px] text-slate-700 font-medium">
+                          {value}
+                        </span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 3. Charts & Lists: Time by Task Type & Submission Status by Member */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Time by Task Type */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-900">
-              Time by Task Type
-            </h2>
-            <span className="text-xs text-gray-500 font-medium">Total: {totalHours} hrs</span>
-          </div>
-
-          <div className="h-64 w-full">
-            {totalHours === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                <span className="text-2xl mb-1">⏱️</span>
-                <p className="text-sm font-medium text-gray-600">No hour breakdown logged</p>
-                <p className="text-xs text-gray-400">
-                  Hours recorded across task categories will appear here.
-                </p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={timeByTaskType}
-                    dataKey="hours"
-                    nameKey="taskType"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    innerRadius={45}
-                    paddingAngle={3}
-                  >
-                    {timeByTaskType.map((entry) => (
-                      <Cell
-                        key={`cell-${entry.taskType}`}
-                        fill={TASK_TYPE_COLORS[entry.taskType] || '#94a3b8'}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '0.375rem',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: any) => [`${value} hrs`, 'Logged Time']}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    iconType="circle"
-                    formatter={(value) => <span className="text-xs text-gray-700">{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Submission Status by Team Member */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4 flex flex-col">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h2 className="text-base font-semibold text-gray-900">
-              Member Submission Status
-            </h2>
-            <span className="text-xs text-gray-500 font-medium">
+      {/* 5. Team Operations: Member Submission Status & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
+        {/* Member Submission Status */}
+        <Card className="min-w-0 flex flex-col">
+          <CardHeader>
+            <div>
+              <CardTitle>Member Submission Status</CardTitle>
+              <CardDescription>
+                Submission status for all active team members this week.
+              </CardDescription>
+            </div>
+            <span className="text-xs font-medium text-slate-500">
               {submissionStatusByMember.length} Members
             </span>
-          </div>
+          </CardHeader>
 
-          {submissionStatusByMember.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-gray-400">
-              <span className="text-2xl mb-1">👥</span>
-              <p className="text-sm font-medium text-gray-600">No team members found</p>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto max-h-64 space-y-2.5 pr-1">
-              {submissionStatusByMember.map((member) => (
-                <div
-                  key={member.userId}
-                  className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100/70 transition-colors"
-                >
-                  <Link
-                    to={`/manager/team-members/${member.userId}`}
-                    className="font-medium text-sm text-indigo-600 hover:text-indigo-900 hover:underline"
+          <CardContent className="flex-1">
+            {submissionStatusByMember.length === 0 ? (
+              <EmptyState
+                icon="👥"
+                title="No team members found"
+                description="Team members assigned to your team will appear here."
+              />
+            ) : (
+              <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto pr-1">
+                {submissionStatusByMember.map((member) => (
+                  <div
+                    key={member.userId}
+                    className="flex items-center justify-between py-2.5 px-2 hover:bg-slate-50/70 rounded-lg transition-colors gap-3"
                   >
-                    {member.name}
-                  </Link>
-                  <StatusBadge status={member.status} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 4. Recent Activity Feed */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-          <h2 className="text-base font-semibold text-gray-900">Recent Activity</h2>
-          <span className="text-xs text-gray-500 font-medium">Latest submissions & reviews</span>
-        </div>
-
-        {recentActivity.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 space-y-1">
-            <div className="text-2xl">⚡</div>
-            <p className="text-sm font-medium text-gray-600">No recent activity recorded</p>
-            <p className="text-xs text-gray-400">
-              Submission and review actions will appear in this feed.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {recentActivity.map((activity, idx) => {
-              const isApproved = activity.type === 'REPORT_APPROVED';
-              const isCorrection = activity.type === 'CHANGES_REQUESTED';
-
-              const badgeStyle = isApproved
-                ? 'bg-green-100 text-green-800 border-green-200'
-                : isCorrection
-                ? 'bg-amber-100 text-amber-800 border-amber-200'
-                : 'bg-blue-100 text-blue-800 border-blue-200';
-
-              const badgeLabel = isApproved
-                ? 'Approved'
-                : isCorrection
-                ? 'Correction'
-                : 'Submitted';
-
-              return (
-                <div
-                  key={`${activity.reportId}-${activity.timestamp}-${idx}`}
-                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50/50 rounded px-2 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border shrink-0 ${badgeStyle}`}
+                    <Link
+                      to={`/manager/team-members/${member.userId}`}
+                      className="text-xs sm:text-sm font-semibold text-slate-800 hover:text-indigo-600 hover:underline truncate"
                     >
-                      {badgeLabel}
-                    </span>
-                    <span className="text-sm text-gray-800">{activity.message}</span>
+                      {member.name}
+                    </Link>
+                    <StatusBadge status={member.status} size="sm" />
                   </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                  <div className="flex items-center gap-4 text-xs text-gray-500 shrink-0">
-                    <span>{new Date(activity.timestamp).toLocaleString()}</span>
-                    {activity.reportId && (
-                      <Link
-                        to={`/manager/reports/${activity.reportId}`}
-                        className="font-medium text-indigo-600 hover:text-indigo-900 underline"
-                      >
-                        View Report →
-                      </Link>
-                    )}
+        {/* Recent Activity */}
+        <Card className="min-w-0 flex flex-col">
+          <CardHeader>
+            <div>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>
+                Audit log of latest weekly submissions and manager reviews.
+              </CardDescription>
+            </div>
+          </CardHeader>
+
+          <CardContent className="flex-1">
+            {recentActivity.length === 0 ? (
+              <EmptyState
+                icon="⚡"
+                title="No recent activity recorded"
+                description="Report submissions, reviews, and approvals will stream into this feed."
+              />
+            ) : (
+              <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto pr-1">
+                {recentActivity.map((activity, idx) => (
+                  <div
+                    key={`${activity.reportId}-${activity.timestamp}-${idx}`}
+                    className="py-3 px-2 flex items-start justify-between gap-3 text-xs"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="text-slate-800 font-medium">
+                        {activity.message}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {new Date(activity.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                    <Link
+                      to={`/manager/reports/${activity.reportId}`}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 shrink-0 hover:underline"
+                    >
+                      View Report →
+                    </Link>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

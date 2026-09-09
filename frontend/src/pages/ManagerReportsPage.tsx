@@ -4,6 +4,24 @@ import { ReportStatus, type WeeklyReport, type Project } from '../types';
 import { reportsApi } from '../api/reports';
 import { projectsApi } from '../api/projects';
 import StatusBadge from '../components/StatusBadge';
+import {
+  PageHeader,
+  Card,
+  DataTable,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  Pagination,
+  Button,
+  Select,
+  Input,
+  FormField,
+  ErrorState,
+  LoadingState,
+  EmptyState,
+} from '../components/ui';
 
 export default function ManagerReportsPage() {
   const [reports, setReports] = useState<WeeklyReport[]>([]);
@@ -23,7 +41,7 @@ export default function ManagerReportsPage() {
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const limit = 10;
 
-  // Load Projects for filter
+  // Load Projects for filter dropdown
   useEffect(() => {
     async function loadProjects() {
       try {
@@ -70,159 +88,151 @@ export default function ManagerReportsPage() {
     setPage(1);
   };
 
+  const hasActiveFilters =
+    Boolean(selectedProject) ||
+    Boolean(selectedStatus) ||
+    Boolean(startDate) ||
+    Boolean(endDate);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Team Weekly Reports</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Review, approve, or request changes on weekly submissions from team members.
-        </p>
-      </div>
+    <div className="space-y-6 min-w-0">
+      {/* 1. Page Header */}
+      <PageHeader
+        title="Team Weekly Reports"
+        description="Review, approve, or request revisions on weekly submissions across all team members."
+      />
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {error}
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={loadReports} />}
 
-      {/* Filter Card */}
-      <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="text-sm font-semibold text-gray-800">Filter Reports</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Project filter */}
-          <div>
-            <label htmlFor="filter-project" className="block text-xs font-medium text-gray-600 mb-1">
-              Project
-            </label>
-            <select
-              id="filter-project"
-              value={selectedProject}
-              onChange={(e) => {
-                setSelectedProject(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">All Projects</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+      {/* 2. Filter Bar Card */}
+      <Card className="min-w-0">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Filter Reports
+            </span>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="text-xs text-indigo-600 hover:text-indigo-800"
+              >
+                Clear all filters
+              </Button>
+            )}
           </div>
 
-          {/* Status filter */}
-          <div>
-            <label htmlFor="filter-status" className="block text-xs font-medium text-gray-600 mb-1">
-              Status
-            </label>
-            <select
-              id="filter-status"
-              value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">All Statuses</option>
-              <option value={ReportStatus.SUBMITTED}>Submitted (Pending Review)</option>
-              <option value={ReportStatus.NEEDS_CORRECTION}>Needs Correction</option>
-              <option value={ReportStatus.APPROVED}>Approved</option>
-              <option value={ReportStatus.DRAFT}>Draft</option>
-            </select>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 min-w-0">
+            {/* Project Filter */}
+            <FormField label="Project" htmlFor="filter-project">
+              <Select
+                id="filter-project"
+                value={selectedProject}
+                onChange={(e) => {
+                  setSelectedProject(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">All Projects</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-          {/* Start Date */}
-          <div>
-            <label htmlFor="filter-start-date" className="block text-xs font-medium text-gray-600 mb-1">
-              From Date
-            </label>
-            <input
-              id="filter-start-date"
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
+            {/* Status Filter */}
+            <FormField label="Review Status" htmlFor="filter-status">
+              <Select
+                id="filter-status"
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">All Statuses</option>
+                <option value={ReportStatus.SUBMITTED}>Submitted (Pending Review)</option>
+                <option value={ReportStatus.NEEDS_CORRECTION}>Needs Correction</option>
+                <option value={ReportStatus.APPROVED}>Approved</option>
+                <option value={ReportStatus.DRAFT}>Draft</option>
+              </Select>
+            </FormField>
 
-          {/* End Date */}
-          <div>
-            <label htmlFor="filter-end-date" className="block text-xs font-medium text-gray-600 mb-1">
-              To Date
-            </label>
-            <input
-              id="filter-end-date"
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            />
+            {/* Start Date */}
+            <FormField label="From Date" htmlFor="filter-start-date">
+              <Input
+                id="filter-start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </FormField>
+
+            {/* End Date */}
+            <FormField label="To Date" htmlFor="filter-end-date">
+              <Input
+                id="filter-end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </FormField>
           </div>
         </div>
+      </Card>
 
-        {(selectedProject || selectedStatus || startDate || endDate) && (
-          <div className="flex justify-end pt-2">
-            <button
-              type="button"
-              onClick={handleClearFilters}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Reports Table Card */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      {/* 3. Reports Table */}
+      <Card padding="none" className="min-w-0 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm text-gray-500 font-medium">Loading submissions...</span>
-            </div>
-          </div>
+          <LoadingState message="Loading team submissions..." />
         ) : reports.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="text-gray-400 text-4xl">📄</div>
-            <h3 className="text-base font-semibold text-gray-900">No Reports Found</h3>
-            <p className="text-sm text-gray-500 max-w-sm mx-auto">
-              No weekly reports match your current filter criteria.
-            </p>
-          </div>
+          <EmptyState
+            icon="📋"
+            title="No reports match your filters"
+            description="Try clearing or adjusting your search parameters to view team submissions."
+            action={
+              hasActiveFilters
+                ? {
+                    label: 'Clear Filters',
+                    onClick: handleClearFilters,
+                    variant: 'secondary',
+                  }
+                : undefined
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-700 border-b border-gray-200">
+          <div>
+            <DataTable className="border-none shadow-none rounded-none">
+              <TableHead>
                 <tr>
-                  <th className="py-3.5 px-6">Team Member</th>
-                  <th className="py-3.5 px-6">Week Range</th>
-                  <th className="py-3.5 px-6">Project</th>
-                  <th className="py-3.5 px-6">Status</th>
-                  <th className="py-3.5 px-6">Submitted Date</th>
-                  <th className="py-3.5 px-6 text-right">Action</th>
+                  <TableHeaderCell>Team Member</TableHeaderCell>
+                  <TableHeaderCell>Week Range</TableHeaderCell>
+                  <TableHeaderCell>Project</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>Submitted Date</TableHeaderCell>
+                  <TableHeaderCell align="right">Action</TableHeaderCell>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
+              </TableHead>
+              <TableBody>
                 {reports.map((report) => {
                   const isPendingReview = report.status === ReportStatus.SUBMITTED;
+
                   return (
-                    <tr key={report.id} className="hover:bg-gray-50/75 transition-colors">
-                      <td className="py-4 px-6 font-medium text-gray-900 whitespace-nowrap">
+                    <TableRow key={report.id}>
+                      <TableCell className="font-semibold text-slate-900">
                         {report.user?.id ? (
                           <Link
                             to={`/manager/team-members/${report.user.id}`}
-                            className="text-indigo-600 hover:text-indigo-900 hover:underline font-semibold block"
+                            className="text-indigo-600 hover:text-indigo-800 hover:underline font-semibold block"
                           >
                             {report.user?.firstName} {report.user?.lastName}
                           </Link>
@@ -231,74 +241,55 @@ export default function ManagerReportsPage() {
                             {report.user?.firstName} {report.user?.lastName}
                           </div>
                         )}
-                        <div className="text-xs text-gray-400">{report.user?.email}</div>
-                      </td>
-                      <td className="py-4 px-6 text-gray-800 whitespace-nowrap">
+                        <div className="text-[11px] text-slate-400 font-normal">
+                          {report.user?.email}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="font-medium text-slate-800">
                         {report.weekStart} – {report.weekEnd}
-                      </td>
-                      <td className="py-4 px-6 text-gray-800 font-medium whitespace-nowrap">
+                      </TableCell>
+
+                      <TableCell className="font-medium text-slate-700">
                         {report.project?.name || '—'}
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <StatusBadge status={report.status} />
-                      </td>
-                      <td className="py-4 px-6 text-gray-500 whitespace-nowrap">
-                        {report.submittedAt ? new Date(report.submittedAt).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="py-4 px-6 text-right whitespace-nowrap">
-                        <Link
-                          to={`/manager/reports/${report.id}`}
-                          className={`font-semibold px-3 py-1.5 rounded-md text-xs transition-colors ${
-                            isPendingReview
-                              ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {isPendingReview ? 'Review' : 'View'}
+                      </TableCell>
+
+                      <TableCell>
+                        <StatusBadge status={report.status} size="sm" />
+                      </TableCell>
+
+                      <TableCell className="text-slate-500">
+                        {report.submittedAt
+                          ? new Date(report.submittedAt).toLocaleDateString()
+                          : '—'}
+                      </TableCell>
+
+                      <TableCell align="right">
+                        <Link to={`/manager/reports/${report.id}`}>
+                          <Button
+                            variant={isPendingReview ? 'primary' : 'outline'}
+                            size="sm"
+                          >
+                            {isPendingReview ? 'Review Report' : 'View Report'}
+                          </Button>
                         </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </TableBody>
+            </DataTable>
 
-        {/* Pagination Footer */}
-        {!loading && reports.length > 0 && (
-          <div className="bg-gray-50 px-6 py-3.5 border-t border-gray-200 flex items-center justify-between text-sm text-gray-600">
-            <div>
-              Showing <span className="font-medium">{(page - 1) * limit + 1}</span> to{' '}
-              <span className="font-medium">
-                {Math.min(page * limit, totalRecords)}
-              </span>{' '}
-              of <span className="font-medium">{totalRecords}</span> reports
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                className="px-3 py-1.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-medium cursor-pointer"
-              >
-                Previous
-              </button>
-              <span className="px-2 text-xs text-gray-500 font-medium">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                className="px-3 py-1.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-medium cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRecords={totalRecords}
+              limit={limit}
+              onPageChange={setPage}
+            />
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ReportStatus,
@@ -8,6 +8,27 @@ import {
 } from '../types';
 import { reportsApi } from '../api/reports';
 import StatusBadge from '../components/StatusBadge';
+import {
+  PageHeader,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  DataTable,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  Button,
+  Modal,
+  ConfirmDialog,
+  FormField,
+  Textarea,
+  ErrorState,
+  LoadingState,
+} from '../components/ui';
 
 export default function ManagerReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -96,571 +117,601 @@ export default function ManagerReviewPage() {
       const versionData = await reportsApi.getReportVersion(id, versionNumber);
       setViewingVersion(versionData);
     } catch (err: any) {
-      setVersionError(err?.response?.data?.message || `Failed to load version ${versionNumber}.`);
+      setVersionError(
+        err?.response?.data?.message || `Failed to load version ${versionNumber}.`,
+      );
     } finally {
       setVersionLoading(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex flex-col items-center space-y-2">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-sm text-gray-500 font-medium">Loading report details...</span>
-        </div>
-      </div>
-    );
+    return <LoadingState message="Loading report review details..." />;
   }
 
   if (error || !report) {
     return (
-      <div className="bg-white p-8 rounded-lg border border-red-200 text-center space-y-4">
-        <div className="text-red-600 font-medium">{error || 'Report not found.'}</div>
-        <Link
-          to="/manager/reports"
-          className="inline-block px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
-        >
-          ← Back to Team Reports
-        </Link>
+      <div className="space-y-4 min-w-0">
+        <ErrorState
+          title="Report Not Found"
+          message={error || 'Unable to retrieve team submission.'}
+        />
+        <div>
+          <Link to="/manager/reports">
+            <Button variant="outline" size="sm">
+              ← Back to Team Reports
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   const isSubmitted = report.status === ReportStatus.SUBMITTED;
-
-  // Active data to display (either snapshot or current report)
-  const displayNotes = viewingVersion ? viewingVersion.snapshot.notes : report.notes;
-  const displayTasks = viewingVersion ? viewingVersion.snapshot.tasks : report.tasks;
-  const displayNextWeekTasks = viewingVersion
-    ? viewingVersion.snapshot.nextWeekTasks
-    : report.nextWeekTasks;
-  const displayBlockers = viewingVersion ? viewingVersion.snapshot.blockers : report.blockers;
-  const displayAchievements = viewingVersion
-    ? viewingVersion.snapshot.achievements
-    : report.achievements;
-  const displayHourBreakdowns = viewingVersion
-    ? viewingVersion.snapshot.hourBreakdowns
-    : report.hourBreakdowns;
-  const displayProjectName = viewingVersion
-    ? viewingVersion.snapshot.project?.name
-    : report.project?.name;
+  const isApproved = report.status === ReportStatus.APPROVED;
+  const isNeedsCorrection = report.status === ReportStatus.NEEDS_CORRECTION;
 
   return (
-    <div className="space-y-6">
-      {/* Action Notifications */}
+    <div className="space-y-6 min-w-0">
+      {/* 1. Page Header */}
+      <PageHeader
+        backLink={{
+          to: '/manager/reports',
+          label: 'Team Reports',
+        }}
+        title={`Review Report: ${report.user?.firstName} ${report.user?.lastName}`}
+        description={`Week: ${report.weekStart} – ${report.weekEnd} • Project: ${
+          report.project?.name || 'Unassigned'
+        }`}
+        badge={<StatusBadge status={report.status} size="sm" />}
+        actions={
+          isSubmitted ? (
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowChangesModal(true);
+                  setCommentError(null);
+                }}
+                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+              >
+                Request Changes
+              </Button>
+              <Button
+                variant="success"
+                size="sm"
+                onClick={() => setShowApproveConfirm(true)}
+              >
+                Approve Report
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
+
+      {/* Notifications */}
       {actionSuccess && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-lg flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm flex items-center justify-between min-w-0">
           <span>{actionSuccess}</span>
           <button
             type="button"
             onClick={() => setActionSuccess(null)}
-            className="text-emerald-600 hover:text-emerald-900 font-bold ml-4"
+            className="text-slate-400 hover:text-slate-600 font-bold ml-3 cursor-pointer"
           >
-            ×
+            ✕
           </button>
         </div>
       )}
 
-      {actionError && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg flex items-center justify-between">
-          <span>{actionError}</span>
-          <button
-            type="button"
-            onClick={() => setActionError(null)}
-            className="text-red-600 hover:text-red-900 font-bold ml-4"
-          >
-            ×
-          </button>
+      {actionError && <ErrorState message={actionError} />}
+      {versionError && <ErrorState message={versionError} />}
+
+      {/* Status Indicators */}
+      {isSubmitted && (
+        <div className="bg-sky-50 border border-sky-200 p-4 rounded-xl text-xs sm:text-sm text-sky-800 flex items-center gap-2 min-w-0">
+          <span>ℹ️</span>
+          <span>
+            <strong>Awaiting Manager Decision:</strong> Review the work items, deliverables, and blockers below. You may approve the report or request changes with specific feedback.
+          </span>
         </div>
       )}
 
-      {versionError && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg flex items-center justify-between">
-          <span>{versionError}</span>
-          <button
-            type="button"
-            onClick={() => setVersionError(null)}
-            className="text-red-600 hover:text-red-900 font-bold ml-4"
-          >
-            ×
-          </button>
+      {isApproved && (
+        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-xs sm:text-sm text-emerald-800 flex items-center gap-2 min-w-0">
+          <span>✅</span>
+          <span>
+            <strong>Approved Report:</strong> This report was accepted by management
+            {report.approvedAt && ` on ${new Date(report.approvedAt).toLocaleString()}`}.
+          </span>
         </div>
       )}
 
-      {/* Snapshot Viewing Notice Banner */}
-      {viewingVersion && (
-        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📸</span>
-            <div>
-              <div className="text-sm font-bold text-indigo-900">
-                Viewing Snapshot: Version {viewingVersion.versionNumber}
-              </div>
-              <div className="text-xs text-indigo-700">
-                Submitted on {new Date(viewingVersion.submittedAt).toLocaleString()}
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setViewingVersion(null)}
-            className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white border border-indigo-300 rounded-md hover:bg-indigo-100 shadow-sm cursor-pointer"
-          >
-            ← Return to Current Report View
-          </button>
+      {isNeedsCorrection && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs sm:text-sm text-amber-800 flex items-center gap-2 min-w-0">
+          <span>⚠️</span>
+          <span>
+            <strong>Changes Requested:</strong> This report was returned to the author for revision and is currently awaiting their resubmission.
+          </span>
         </div>
       )}
 
-      {/* Header & Meta Card */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Weekly Report: {report.weekStart} – {report.weekEnd}
-            </h1>
-            <StatusBadge status={report.status} />
+      {/* Member & Project Metadata Card */}
+      <Card className="min-w-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              Author
+            </span>
+            <Link
+              to={`/manager/team-members/${report.user?.id}`}
+              className="font-semibold text-slate-900 hover:text-indigo-600 hover:underline"
+            >
+              {report.user?.firstName} {report.user?.lastName}
+            </Link>
+            <div className="text-[11px] text-slate-400">{report.user?.email}</div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-600 pt-1">
-            <div>
-              Team Member:{' '}
-              <strong className="text-gray-900">
-                {report.user?.firstName} {report.user?.lastName}
-              </strong>{' '}
-              <span className="text-xs text-gray-400">({report.user?.email})</span>
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              Project
+            </span>
+            <div className="font-semibold text-slate-900">
+              {report.project?.name || '—'}
             </div>
-            <div>
-              Project: <strong className="text-gray-900">{displayProjectName || '—'}</strong>
+            <div className="text-[11px] text-slate-400">
+              Week: {report.weekStart} to {report.weekEnd}
             </div>
-            <div>
-              Submitted:{' '}
-              <span className="text-gray-900">
-                {report.submittedAt ? new Date(report.submittedAt).toLocaleString() : 'Not submitted yet'}
-              </span>
+          </div>
+
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              Submission Info
+            </span>
+            <div className="font-medium text-slate-700">
+              Submitted: {report.submittedAt ? new Date(report.submittedAt).toLocaleString() : 'Not submitted'}
             </div>
-            {report.approvedAt && (
-              <div>
-                Approved:{' '}
-                <span className="text-gray-900">
-                  {new Date(report.approvedAt).toLocaleString()}
-                </span>
-              </div>
-            )}
+            <div className="text-[11px] text-slate-400">
+              Last Updated: {new Date(report.updatedAt).toLocaleDateString()}
+            </div>
           </div>
         </div>
+      </Card>
 
-        {/* Action Buttons (Approve / Request Changes) */}
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
-          <Link
-            to="/manager/reports"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 shadow-sm cursor-pointer"
-          >
-            ← Back to List
-          </Link>
-
-          {isSubmitted && !viewingVersion && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setCommentError(null);
-                  setShowChangesModal(true);
-                }}
-                disabled={actionLoading}
-                className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-300 rounded-md hover:bg-amber-100 disabled:opacity-50 shadow-sm cursor-pointer"
-              >
-                Request Changes
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowApproveConfirm(true)}
-                disabled={actionLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 shadow-sm cursor-pointer"
-              >
-                Approve Report
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Notes Section */}
-      {displayNotes && (
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-            Notes & Summary
-          </h2>
-          <p className="text-sm text-gray-800 whitespace-pre-wrap">{displayNotes}</p>
-        </div>
+      {/* Notes / Summary */}
+      {report.notes && (
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle>Member Notes & Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs sm:text-sm text-slate-700 whitespace-pre-wrap">
+              {report.notes}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Tasks Completed Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-          Tasks Completed / Worked On ({displayTasks?.length || 0})
-        </h2>
-
-        {!displayTasks || displayTasks.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No tasks listed.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-700 border-b border-gray-200">
+      <Card padding="none" className="min-w-0 overflow-hidden">
+        <CardHeader className="p-5 border-b border-slate-100 mb-0">
+          <CardTitle>
+            Tasks Completed / Worked On ({report.tasks?.length || 0})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!report.tasks || report.tasks.length === 0 ? (
+            <p className="p-5 text-xs text-slate-400 italic">No tasks listed.</p>
+          ) : (
+            <DataTable className="border-none shadow-none rounded-none">
+              <TableHead>
                 <tr>
-                  <th className="py-3 px-4">Task Name</th>
-                  <th className="py-3 px-4">Priority</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Progress</th>
-                  <th className="py-3 px-4">Time (Plan / Spent)</th>
-                  <th className="py-3 px-4">Deliverable</th>
+                  <TableHeaderCell>Task Name</TableHeaderCell>
+                  <TableHeaderCell>Priority</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>Progress</TableHeaderCell>
+                  <TableHeaderCell>Time (Plan / Spent)</TableHeaderCell>
+                  <TableHeaderCell>Deliverable</TableHeaderCell>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {displayTasks.map((task, idx) => (
-                  <tr key={task.id || idx} className="hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{task.taskName}</td>
-                    <td className="py-3 px-4">
-                      <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-800 font-medium">
-                        {task.priority}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-block px-2 py-0.5 text-xs rounded bg-blue-50 text-blue-700 font-medium">
-                        {task.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
+              </TableHead>
+              <TableBody>
+                {report.tasks.map((task, idx) => (
+                  <TableRow key={task.id || idx}>
+                    <TableCell className="font-semibold text-slate-900">
+                      {task.taskName}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={task.priority} size="sm" />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={task.status} size="sm" />
+                    </TableCell>
+                    <TableCell className="text-slate-700">
                       {task.actualPercentage}%{' '}
-                      <span className="text-xs text-gray-400">
-                        (planned {task.plannedPercentage}%)
+                      <span className="text-[11px] text-slate-400 font-normal">
+                        (plan {task.plannedPercentage}%)
                       </span>
-                    </td>
-                    <td className="py-3 px-4">
+                    </TableCell>
+                    <TableCell className="text-slate-700 font-medium">
                       {task.spentMinutes}m{' '}
-                      <span className="text-xs text-gray-400">
+                      <span className="text-[11px] text-slate-400 font-normal">
                         / {task.plannedMinutes}m
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-gray-500">
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500 max-w-xs truncate">
                       {task.deliverable || '—'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </TableBody>
+            </DataTable>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Next Week Tasks */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-          Next Week Planned Tasks ({displayNextWeekTasks?.length || 0})
-        </h2>
-        {!displayNextWeekTasks || displayNextWeekTasks.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No tasks planned for next week.</p>
-        ) : (
-          <ul className="list-disc list-inside space-y-1.5 text-sm text-gray-800">
-            {displayNextWeekTasks.map((nt, idx) => (
-              <li key={nt.id || idx}>{nt.taskName}</li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>
+            Next Week Planned Tasks ({report.nextWeekTasks?.length || 0})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!report.nextWeekTasks || report.nextWeekTasks.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">No planned tasks listed.</p>
+          ) : (
+            <ul className="list-disc list-inside space-y-1.5 text-xs sm:text-sm text-slate-700">
+              {report.nextWeekTasks.map((nt, idx) => (
+                <li key={nt.id || idx}>{nt.taskName}</li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Blockers & Achievements Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
         {/* Blockers */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-            Blockers & Challenges
-          </h2>
-          {!displayBlockers || displayBlockers.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No blockers recorded.</p>
-          ) : (
-            <div className="space-y-2">
-              {displayBlockers.map((blocker, idx) => (
-                <div
-                  key={blocker.id || idx}
-                  className={`p-3 rounded-lg border text-sm ${
-                    blocker.isKeyIssue
-                      ? 'bg-red-50 border-red-200 text-red-900 font-medium'
-                      : 'bg-gray-50 border-gray-200 text-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{blocker.description}</span>
-                    {blocker.isKeyIssue && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300">
-                        KEY ISSUE
-                      </span>
-                    )}
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle>Blockers & Challenges</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!report.blockers || report.blockers.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No blockers recorded.</p>
+            ) : (
+              <div className="space-y-2">
+                {report.blockers.map((blocker, idx) => (
+                  <div
+                    key={blocker.id || idx}
+                    className={`p-3 rounded-lg border text-xs sm:text-sm ${
+                      blocker.isKeyIssue
+                        ? 'bg-rose-50 border-rose-200 text-rose-900 font-medium'
+                        : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{blocker.description}</span>
+                      {blocker.isKeyIssue && (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-200 text-rose-900">
+                          KEY ISSUE
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Achievements */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-            Key Achievements
-          </h2>
-          {!displayAchievements || displayAchievements.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No achievements recorded.</p>
-          ) : (
-            <div className="space-y-2">
-              {displayAchievements.map((ach, idx) => (
-                <div
-                  key={ach.id || idx}
-                  className={`p-3 rounded-lg border text-sm ${
-                    ach.isKeyAchievement
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-medium'
-                      : 'bg-gray-50 border-gray-200 text-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{ach.description}</span>
-                    {ach.isKeyAchievement && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        KEY ACHIEVEMENT
-                      </span>
-                    )}
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle>Key Achievements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!report.achievements || report.achievements.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No achievements recorded.</p>
+            ) : (
+              <div className="space-y-2">
+                {report.achievements.map((ach, idx) => (
+                  <div
+                    key={ach.id || idx}
+                    className={`p-3 rounded-lg border text-xs sm:text-sm ${
+                      ach.isKeyAchievement
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-medium'
+                        : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{ach.description}</span>
+                      {ach.isKeyAchievement && (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-200 text-emerald-900">
+                          KEY ACHIEVEMENT
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Hour Breakdown */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-          Hour Breakdown
-        </h2>
-        {!displayHourBreakdowns || displayHourBreakdowns.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">No hour breakdown provided.</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {displayHourBreakdowns.map((hb, idx) => (
-              <div
-                key={hb.id || idx}
-                className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-center"
-              >
-                <div className="text-xs font-medium text-gray-500 uppercase">{hb.taskType}</div>
-                <div className="text-lg font-bold text-gray-900 mt-1">{hb.hours} hrs</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Version History & Review History Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Submitted Version History */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-            Submitted Version History ({report.versions?.length || 0})
-          </h2>
-
-          {!report.versions || report.versions.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No submission snapshots stored yet.</p>
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>Hour Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!report.hourBreakdowns || report.hourBreakdowns.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">No hours logged.</p>
           ) : (
-            <div className="space-y-3">
-              {report.versions.map((ver) => {
-                const isSelected = viewingVersion?.versionNumber === ver.versionNumber;
-                return (
-                  <div
-                    key={ver.id}
-                    className={`p-3.5 rounded-lg border flex items-center justify-between transition-colors ${
-                      isSelected
-                        ? 'bg-indigo-50 border-indigo-300'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        Version {ver.versionNumber}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Submitted: {new Date(ver.submittedAt).toLocaleString()}
-                      </div>
-                    </div>
-                    <div>
-                      {isSelected ? (
-                        <button
-                          type="button"
-                          onClick={() => setViewingVersion(null)}
-                          className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-100 cursor-pointer"
-                        >
-                          Viewing
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={versionLoading}
-                          onClick={() => handleViewVersion(ver.versionNumber)}
-                          className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 rounded hover:bg-indigo-50 shadow-sm cursor-pointer"
-                        >
-                          View Snapshot
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Review History */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">
-            Review History ({report.reviews?.length || 0})
-          </h2>
-
-          {!report.reviews || report.reviews.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No manager reviews recorded yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {report.reviews.map((rev) => (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 min-w-0">
+              {report.hourBreakdowns.map((hb, idx) => (
                 <div
-                  key={rev.id}
-                  className="p-3.5 rounded-lg border border-gray-200 bg-gray-50 space-y-2"
+                  key={hb.id || idx}
+                  className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center min-w-0"
                 >
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      {rev.action === ReviewAction.APPROVED ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
-                          Approved Version {rev.reportVersion}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">
-                          Changes Requested on Version {rev.reportVersion}
-                        </span>
-                      )}
-                      {rev.reviewer && (
-                        <span className="text-xs text-gray-600 font-medium">
-                          by {rev.reviewer.firstName} {rev.reviewer.lastName}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {new Date(rev.createdAt).toLocaleString()}
-                    </span>
+                  <div className="text-[11px] font-semibold text-slate-500 uppercase truncate">
+                    {hb.taskType}
                   </div>
-                  {rev.comment && (
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap bg-white p-2.5 rounded border border-gray-200">
-                      {rev.comment}
-                    </p>
-                  )}
+                  <div className="text-lg font-bold text-slate-900 mt-1">
+                    {hb.hours} hrs
+                  </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* Version History & Reviews Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
+        {/* Version Snapshots */}
+        <Card className="min-w-0 flex flex-col">
+          <CardHeader>
+            <div>
+              <CardTitle>
+                Version Snapshots ({report.versions?.length || 0})
+              </CardTitle>
+              <CardDescription>
+                Historical submission snapshots captured at time of submission.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1">
+            {!report.versions || report.versions.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No version snapshots recorded.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {report.versions.map((ver) => (
+                  <div
+                    key={ver.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50/70 gap-2"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
+                        Version {ver.versionNumber}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {new Date(ver.submittedAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewVersion(ver.versionNumber)}
+                      disabled={versionLoading}
+                    >
+                      View Snapshot
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Review Audit History */}
+        <Card className="min-w-0 flex flex-col">
+          <CardHeader>
+            <div>
+              <CardTitle>
+                Review Decisions ({report.reviews?.length || 0})
+              </CardTitle>
+              <CardDescription>
+                Logged manager reviews, approvals, and revision feedback.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1">
+            {!report.reviews || report.reviews.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No review records logged yet.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {report.reviews.map((rev) => (
+                  <div
+                    key={rev.id}
+                    className="p-3 rounded-lg border border-slate-200 bg-slate-50/70 space-y-1.5 text-xs sm:text-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        {rev.action === ReviewAction.APPROVED ? (
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">
+                            Approved v{rev.reportVersion}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">
+                            Changes Requested (v{rev.reportVersion})
+                          </span>
+                        )}
+                        {rev.reviewer && (
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            by {rev.reviewer.firstName} {rev.reviewer.lastName}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-400">
+                        {new Date(rev.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {rev.comment && (
+                      <p className="text-xs text-slate-700 bg-white p-2.5 rounded border border-slate-200 whitespace-pre-wrap">
+                        {rev.comment}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Confirmation Modal for Approve */}
+      {/* Approve Confirmation Modal */}
       {showApproveConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900">Approve Weekly Report</h3>
-            <p className="text-sm text-gray-600">
-              Are you sure you want to approve this report for{' '}
-              <strong>
-                {report.user?.firstName} {report.user?.lastName}
-              </strong>{' '}
-              ({report.weekStart} – {report.weekEnd})?
-            </p>
-            <p className="text-xs text-gray-500">
-              Once approved, this report will be marked as APPROVED and locked from further edits.
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowApproveConfirm(false)}
-                disabled={actionLoading}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleApprove}
-                disabled={actionLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 cursor-pointer"
-              >
-                {actionLoading ? 'Approving...' : 'Yes, Approve'}
-              </button>
+        <ConfirmDialog
+          isOpen={showApproveConfirm}
+          onClose={() => setShowApproveConfirm(false)}
+          onConfirm={handleApprove}
+          title="Approve Weekly Report"
+          message={
+            <div className="space-y-2">
+              <p>
+                Are you sure you want to approve the weekly submission for{' '}
+                <span className="font-semibold text-slate-900">
+                  {report.user?.firstName} {report.user?.lastName}
+                </span>{' '}
+                ({report.weekStart} to {report.weekEnd})?
+              </p>
+              <p className="text-xs text-slate-500">
+                Once approved, this report will be marked as APPROVED and permanently locked from further changes.
+              </p>
             </div>
-          </div>
-        </div>
+          }
+          confirmLabel="Yes, Approve Report"
+          variant="success"
+          isLoading={actionLoading}
+        />
       )}
 
-      {/* Modal for Request Changes */}
+      {/* Request Changes Modal */}
       {showChangesModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6 space-y-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900">Request Changes</h3>
-            <p className="text-sm text-gray-600">
-              Specify what corrections or updates are required from{' '}
-              <strong>
-                {report.user?.firstName} {report.user?.lastName}
-              </strong>
-              .
-            </p>
-            <form onSubmit={handleRequestChanges} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="change-comment"
-                  className="block text-xs font-semibold text-gray-700 mb-1 uppercase"
-                >
-                  Correction Feedback <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="change-comment"
-                  rows={4}
-                  required
-                  value={changesComment}
-                  onChange={(e) => {
-                    setChangesComment(e.target.value);
-                    if (e.target.value.trim()) setCommentError(null);
-                  }}
-                  placeholder="E.g. Please clarify deliverable status for Task 2 and include the hours breakdown..."
-                  className="w-full text-sm rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                />
-                {commentError && (
-                  <p className="text-xs text-red-600 mt-1">{commentError}</p>
+        <Modal
+          isOpen={showChangesModal}
+          onClose={() => {
+            setShowChangesModal(false);
+            setCommentError(null);
+          }}
+          title="Request Revisions"
+          description={`Specify what corrections or updates are required from ${report.user?.firstName} ${report.user?.lastName}.`}
+          footer={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowChangesModal(false);
+                  setCommentError(null);
+                }}
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleRequestChanges}
+                isLoading={actionLoading}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                Send Revision Request
+              </Button>
+            </>
+          }
+        >
+          <form onSubmit={handleRequestChanges} className="space-y-4">
+            <FormField
+              label="Correction Feedback"
+              htmlFor="change-comment"
+              required
+              error={commentError || undefined}
+            >
+              <Textarea
+                id="change-comment"
+                rows={4}
+                required
+                value={changesComment}
+                onChange={(e) => {
+                  setChangesComment(e.target.value);
+                  if (e.target.value.trim()) setCommentError(null);
+                }}
+                placeholder="E.g. Please clarify deliverable status for Task 2 and verify the hours breakdown..."
+              />
+            </FormField>
+          </form>
+        </Modal>
+      )}
+
+      {/* View Version Snapshot Modal */}
+      {viewingVersion && (
+        <Modal
+          isOpen={Boolean(viewingVersion)}
+          onClose={() => setViewingVersion(null)}
+          title={`Snapshot Data: Version ${viewingVersion.versionNumber}`}
+          description={`Captured at ${new Date(
+            viewingVersion.submittedAt,
+          ).toLocaleString()}`}
+          maxWidth="2xl"
+          footer={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewingVersion(null)}
+            >
+              Close Snapshot
+            </Button>
+          }
+        >
+          <div className="space-y-4 text-xs sm:text-sm">
+            {viewingVersion.snapshot && (
+              <div className="space-y-3">
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="font-semibold text-slate-900">
+                    Week: {viewingVersion.snapshot.weekStart} –{' '}
+                    {viewingVersion.snapshot.weekEnd}
+                  </div>
+                  {viewingVersion.snapshot.notes && (
+                    <div className="mt-1 text-slate-600">
+                      Notes: {viewingVersion.snapshot.notes}
+                    </div>
+                  )}
+                </div>
+
+                {viewingVersion.snapshot.tasks && (
+                  <div>
+                    <h4 className="font-bold text-slate-900 mb-1">
+                      Tasks ({viewingVersion.snapshot.tasks.length})
+                    </h4>
+                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden bg-white">
+                      {viewingVersion.snapshot.tasks.map((t: any, i: number) => (
+                        <div key={i} className="p-2.5 flex items-center justify-between text-xs">
+                          <span className="font-medium text-slate-800">{t.taskName}</span>
+                          <span className="text-slate-500">
+                            {t.status} • {t.actualPercentage}% • {t.spentMinutes}m
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowChangesModal(false);
-                    setCommentError(null);
-                  }}
-                  disabled={actionLoading}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
-                >
-                  {actionLoading ? 'Submitting...' : 'Send Correction Request'}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
