@@ -156,6 +156,15 @@ The persistence layer is structured into 10 primary relational tables:
 For the full entity-relationship diagram and schema details, see [database-er-diagram.md](docs/database-er-diagram.md).
 
 ---
+### Entity Relationship Diagram
+
+The following diagram shows the main database entities and their relationships.
+
+![Database ER Diagram](docs/database-er-diagram.png)
+
+For the Mermaid source and detailed schema explanation, see
+[database-er-diagram.md](docs/database-er-diagram.md).
+
 
 ## Report Lifecycle Workflow
 
@@ -387,3 +396,42 @@ Executes TypeScript type check (`tsc -b`) and generates production bundle in `fr
 - **Export & PDF Reports**: Generation of downloadable PDF summaries and CSV exports for stakeholder reporting.
 - **AI Report Assistant**: Optional summarization assistant to draft weekly bullet points from task commits and ticket activity.
 - **Enhanced Trend Analytics**: Multi-quarter velocity analytics and predictive completion forecasting.
+
+
+## UI & Screenshots
+
+### Login
+
+![Login Screen](docs/screenshots/login_screen.png)
+
+### Team Member Dashboard
+
+![Team Member Dashboard](docs/screenshots/team_member_dashboard.png)
+
+### Weekly Report Form
+
+![Weekly Report Form](docs/screenshots/weekly_report_form.png)
+
+### Report History
+
+![Report History](docs/screenshots/report_history.png)
+
+### Manager Dashboard
+
+![Manager Dashboard](docs/screenshots/manager_dashboard.png)
+
+### Team Weekly Reports
+
+![Team Weekly Reports](docs/screenshots/team_weekly_rept.png)
+
+### Project Management
+
+![Project Management](docs/screenshots/projects.png)
+
+### User Management
+
+![User Management](docs/screenshots/user_managment.png)
+
+### Edit User Management
+
+![Edit User Management](docs/screenshots/edit_user_management.png)

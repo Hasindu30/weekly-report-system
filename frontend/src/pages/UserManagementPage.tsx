@@ -2,6 +2,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { type User, UserRole } from '../types';
 import { adminUsersApi } from '../api/admin-users';
+import StatusBadge from '../components/StatusBadge';
+import {
+  PageHeader,
+  Card,
+  DataTable,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  Pagination,
+  Button,
+  Modal,
+  ConfirmDialog,
+  FormField,
+  Select,
+  SearchInput,
+  ErrorState,
+  LoadingState,
+  EmptyState,
+} from '../components/ui';
 
 export default function UserManagementPage() {
   const { user: currentUser } = useAuth();
@@ -133,387 +154,314 @@ export default function UserManagementPage() {
     }
   };
 
-  const getRoleBadge = (role: UserRole) => {
-    switch (role) {
-      case UserRole.ADMIN:
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case UserRole.MANAGER:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case UserRole.TEAM_MEMBER:
-      default:
-        return 'bg-green-100 text-green-800 border-green-200';
-    }
-  };
+  const hasActiveFilters = Boolean(search) || Boolean(roleFilter) || Boolean(statusFilter);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage system users, update administrative roles, and activate or deactivate accounts.
-        </p>
-      </div>
+    <div className="space-y-6 min-w-0">
+      {/* 1. Page Header */}
+      <PageHeader
+        title="User Management"
+        description="Manage organizational accounts, assign administrative privileges, and toggle activation status."
+      />
 
       {actionSuccess && (
-        <div className="p-4 bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm flex items-center justify-between min-w-0">
           <span>{actionSuccess}</span>
           <button
             type="button"
             onClick={() => setActionSuccess(null)}
-            className="text-green-600 hover:text-green-800 font-bold ml-4 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 font-bold ml-3 cursor-pointer"
           >
-            ×
+            ✕
           </button>
         </div>
       )}
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {error}
+      {error && <ErrorState message={error} onRetry={fetchUsers} />}
+
+      {/* 2. Filter Bar */}
+      <Card className="min-w-0">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Search & Filters
+            </span>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="text-xs text-indigo-600 hover:text-indigo-800"
+              >
+                Clear all filters
+              </Button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 min-w-0">
+            {/* Search */}
+            <FormField label="Search User" htmlFor="search-user">
+              <SearchInput
+                id="search-user"
+                placeholder="Name or email address..."
+                value={search}
+                onChange={(val) => {
+                  setSearch(val);
+                  setPage(1);
+                }}
+              />
+            </FormField>
+
+            {/* Role Filter */}
+            <FormField label="Role Filter" htmlFor="role-filter">
+              <Select
+                id="role-filter"
+                value={roleFilter}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">All Roles</option>
+                <option value={UserRole.ADMIN}>ADMIN</option>
+                <option value={UserRole.MANAGER}>MANAGER</option>
+                <option value={UserRole.TEAM_MEMBER}>TEAM_MEMBER</option>
+              </Select>
+            </FormField>
+
+            {/* Status Filter */}
+            <FormField label="Status Filter" htmlFor="status-filter">
+              <Select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </Select>
+            </FormField>
+          </div>
         </div>
-      )}
+      </Card>
 
-      {/* Filter Bar */}
-      <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm space-y-4">
-        <div className="text-sm font-semibold text-gray-800">Filter & Search Users</div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Search */}
-          <div>
-            <label htmlFor="search-user" className="block text-xs font-medium text-gray-600 mb-1">
-              Search (Name or Email)
-            </label>
-            <input
-              id="search-user"
-              type="text"
-              placeholder="e.g. Alex or alex@example.com"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-
-          {/* Role Filter */}
-          <div>
-            <label htmlFor="role-filter" className="block text-xs font-medium text-gray-600 mb-1">
-              Role
-            </label>
-            <select
-              id="role-filter"
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">All Roles</option>
-              <option value={UserRole.ADMIN}>ADMIN</option>
-              <option value={UserRole.MANAGER}>MANAGER</option>
-              <option value={UserRole.TEAM_MEMBER}>TEAM_MEMBER</option>
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <label htmlFor="status-filter" className="block text-xs font-medium text-gray-600 mb-1">
-              Status
-            </label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
-
-        {(search || roleFilter || statusFilter) && (
-          <div className="flex justify-end pt-2">
-            <button
-              type="button"
-              onClick={handleClearFilters}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
-            >
-              Clear filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Users Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      {/* 3. Users Data Table Card */}
+      <Card padding="none" className="min-w-0 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm text-gray-500 font-medium">Loading users...</span>
-            </div>
-          </div>
+          <LoadingState message="Loading user accounts..." />
         ) : users.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="text-gray-400 text-4xl">👥</div>
-            <h3 className="text-base font-semibold text-gray-900">No Users Found</h3>
-            <p className="text-sm text-gray-500 max-w-sm mx-auto">
-              No user accounts match your search and filter criteria.
-            </p>
-          </div>
+          <EmptyState
+            icon="👥"
+            title="No users found"
+            description="No user accounts match your search and filter parameters."
+            action={
+              hasActiveFilters
+                ? {
+                    label: 'Clear Filters',
+                    onClick: handleClearFilters,
+                    variant: 'secondary',
+                  }
+                : undefined
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-700 border-b border-gray-200">
+          <div>
+            <DataTable className="border-none shadow-none rounded-none">
+              <TableHead>
                 <tr>
-                  <th className="py-3.5 px-6">User</th>
-                  <th className="py-3.5 px-6">Role</th>
-                  <th className="py-3.5 px-6">Status</th>
-                  <th className="py-3.5 px-6">Created Date</th>
-                  <th className="py-3.5 px-6 text-right">Actions</th>
+                  <TableHeaderCell>User Details</TableHeaderCell>
+                  <TableHeaderCell>Role</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>Created Date</TableHeaderCell>
+                  <TableHeaderCell align="right">Actions</TableHeaderCell>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
+              </TableHead>
+              <TableBody>
                 {users.map((u) => {
                   const isSelf = u.id === currentUser?.id;
                   return (
-                    <tr key={u.id} className="hover:bg-gray-50/75 transition-colors">
-                      <td className="py-4 px-6 font-medium text-gray-900 whitespace-nowrap">
-                        <div className="flex items-center space-x-2">
+                    <TableRow key={u.id}>
+                      <TableCell className="font-semibold text-slate-900">
+                        <div className="flex items-center gap-2">
                           <span>
                             {u.firstName} {u.lastName}
                           </span>
                           {isSelf && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                               You
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-400 font-normal">{u.email}</div>
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadge(
-                            u.role,
-                          )}`}
-                        >
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            u.isActive !== false
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {u.isActive !== false ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-gray-500 whitespace-nowrap">
-                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => openRoleModal(u)}
-                          className="px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer"
-                        >
-                          Change Role
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openStatusModal(u)}
-                          disabled={isSelf && u.isActive !== false}
-                          title={
-                            isSelf && u.isActive !== false
-                              ? 'You cannot deactivate your own account'
-                              : undefined
-                          }
-                          className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
-                            isSelf && u.isActive !== false
-                              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                              : u.isActive !== false
-                              ? 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200'
-                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200'
-                          }`}
-                        >
-                          {u.isActive !== false ? 'Deactivate' : 'Activate'}
-                        </button>
-                      </td>
-                    </tr>
+                        <div className="text-[11px] text-slate-400 font-normal">
+                          {u.email}
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <StatusBadge status={u.role} size="sm" />
+                      </TableCell>
+
+                      <TableCell>
+                        <StatusBadge
+                          status={u.isActive !== false ? 'ACTIVE' : 'INACTIVE'}
+                          size="sm"
+                        />
+                      </TableCell>
+
+                      <TableCell className="text-slate-500">
+                        {u.createdAt
+                          ? new Date(u.createdAt).toLocaleDateString()
+                          : '—'}
+                      </TableCell>
+
+                      <TableCell align="right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openRoleModal(u)}
+                          >
+                            Change Role
+                          </Button>
+                          <Button
+                            variant={u.isActive !== false ? 'outline' : 'success'}
+                            size="sm"
+                            onClick={() => openStatusModal(u)}
+                            disabled={isSelf && u.isActive !== false}
+                            title={
+                              isSelf && u.isActive !== false
+                                ? 'You cannot deactivate your own account'
+                                : undefined
+                            }
+                            className={
+                              u.isActive !== false
+                                ? 'text-rose-600 hover:text-rose-700 hover:bg-rose-50'
+                                : ''
+                            }
+                          >
+                            {u.isActive !== false ? 'Deactivate' : 'Activate'}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </TableBody>
+            </DataTable>
 
-        {/* Pagination Footer */}
-        {!loading && users.length > 0 && (
-          <div className="bg-gray-50 px-6 py-3.5 border-t border-gray-200 flex items-center justify-between text-sm text-gray-600">
-            <div>
-              Showing <span className="font-medium">{(page - 1) * limit + 1}</span> to{' '}
-              <span className="font-medium">{Math.min(page * limit, totalRecords)}</span> of{' '}
-              <span className="font-medium">{totalRecords}</span> users
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                className="px-3 py-1.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-medium cursor-pointer"
-              >
-                Previous
-              </button>
-              <span className="px-2 text-xs text-gray-500 font-medium">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                className="px-3 py-1.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm font-medium cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRecords={totalRecords}
+              limit={limit}
+              onPageChange={setPage}
+            />
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Change Role Modal */}
       {roleModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">Change User Role</h3>
-            <p className="text-sm text-gray-600">
-              Select a new role for{' '}
-              <span className="font-semibold text-gray-900">
-                {roleModalUser.firstName} {roleModalUser.lastName}
-              </span>{' '}
-              ({roleModalUser.email}).
-            </p>
-
+        <Modal
+          isOpen={Boolean(roleModalUser)}
+          onClose={() => setRoleModalUser(null)}
+          title="Change User Role"
+          description={`Update permission role for ${roleModalUser.firstName} ${roleModalUser.lastName} (${roleModalUser.email}).`}
+          footer={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRoleModalUser(null)}
+                disabled={roleUpdating}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveRole}
+                isLoading={roleUpdating}
+                disabled={
+                  roleModalUser.id === currentUser?.id &&
+                  newSelectedRole !== UserRole.ADMIN
+                }
+              >
+                Save Role
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
             {roleError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
                 {roleError}
               </div>
             )}
 
-            <div>
-              <label htmlFor="role-select" className="block text-xs font-semibold text-gray-700 mb-1">
-                New Role
-              </label>
-              <select
+            <FormField label="Assigned Role" htmlFor="role-select">
+              <Select
                 id="role-select"
                 value={newSelectedRole}
                 onChange={(e) => setNewSelectedRole(e.target.value as UserRole)}
-                className="w-full text-sm rounded-md border border-gray-300 py-2 px-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value={UserRole.TEAM_MEMBER}>TEAM_MEMBER</option>
                 <option value={UserRole.MANAGER}>MANAGER</option>
                 <option value={UserRole.ADMIN}>ADMIN</option>
-              </select>
-              {roleModalUser.id === currentUser?.id && newSelectedRole !== UserRole.ADMIN && (
-                <p className="text-xs text-amber-600 mt-1">
-                  ⚠️ Note: You cannot remove your own ADMIN role.
+              </Select>
+            </FormField>
+
+            {roleModalUser.id === currentUser?.id &&
+              newSelectedRole !== UserRole.ADMIN && (
+                <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                  ⚠️ Note: Self-demotion guard: You cannot remove your own ADMIN role.
+                </p>
+              )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Status Confirmation Modal */}
+      {statusModalUser && (
+        <ConfirmDialog
+          isOpen={Boolean(statusModalUser)}
+          onClose={() => setStatusModalUser(null)}
+          onConfirm={handleToggleStatus}
+          title={
+            statusModalUser.isActive !== false
+              ? 'Deactivate User Account'
+              : 'Activate User Account'
+          }
+          message={
+            <div className="space-y-2">
+              <p>
+                Are you sure you want to{' '}
+                <span className="font-semibold text-slate-900">
+                  {statusModalUser.isActive !== false ? 'deactivate' : 'activate'}
+                </span>{' '}
+                the account for{' '}
+                <span className="font-semibold text-slate-900">
+                  {statusModalUser.firstName} {statusModalUser.lastName}
+                </span>{' '}
+                ({statusModalUser.email})?
+              </p>
+              {statusModalUser.isActive !== false && (
+                <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                  ⚠️ Deactivated users will be blocked from logging into the platform.
                 </p>
               )}
             </div>
-
-            <div className="flex justify-end space-x-3 pt-3">
-              <button
-                type="button"
-                disabled={roleUpdating}
-                onClick={() => setRoleModalUser(null)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={
-                  roleUpdating ||
-                  (roleModalUser.id === currentUser?.id && newSelectedRole !== UserRole.ADMIN)
-                }
-                onClick={handleSaveRole}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 cursor-pointer disabled:opacity-50 flex items-center space-x-1"
-              >
-                {roleUpdating ? 'Saving...' : 'Save Role'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Status Toggle Modal */}
-      {statusModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">
-              {statusModalUser.isActive !== false ? 'Deactivate User Account' : 'Activate User Account'}
-            </h3>
-            <p className="text-sm text-gray-600">
-              Are you sure you want to{' '}
-              <span className="font-semibold">
-                {statusModalUser.isActive !== false ? 'deactivate' : 'activate'}
-              </span>{' '}
-              the account for{' '}
-              <span className="font-semibold text-gray-900">
-                {statusModalUser.firstName} {statusModalUser.lastName}
-              </span>{' '}
-              ({statusModalUser.email})?
-            </p>
-
-            {statusModalUser.isActive !== false && (
-              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-md">
-                Deactivated users will not be able to log in to the application.
-              </div>
-            )}
-
-            {statusError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
-                {statusError}
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-3 pt-3">
-              <button
-                type="button"
-                disabled={statusUpdating}
-                onClick={() => setStatusModalUser(null)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={statusUpdating}
-                onClick={handleToggleStatus}
-                className={`px-4 py-2 text-white rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 ${
-                  statusModalUser.isActive !== false
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
-                }`}
-              >
-                {statusUpdating
-                  ? 'Updating...'
-                  : statusModalUser.isActive !== false
-                  ? 'Deactivate Account'
-                  : 'Activate Account'}
-              </button>
-            </div>
-          </div>
-        </div>
+          }
+          confirmLabel={
+            statusModalUser.isActive !== false ? 'Deactivate Account' : 'Activate Account'
+          }
+          variant={statusModalUser.isActive !== false ? 'danger' : 'success'}
+          isLoading={statusUpdating}
+          error={statusError}
+        />
       )}
     </div>
   );

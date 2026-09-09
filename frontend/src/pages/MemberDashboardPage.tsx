@@ -4,6 +4,25 @@ import { useAuth } from '../context/AuthContext';
 import { reportsApi } from '../api/reports';
 import { ReportStatus, type WeeklyReport } from '../types';
 import StatusBadge from '../components/StatusBadge';
+import {
+  PageHeader,
+  MetricCard,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  DataTable,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  Button,
+  ErrorState,
+  LoadingState,
+  EmptyState,
+} from '../components/ui';
 
 export default function MemberDashboardPage() {
   const { user } = useAuth();
@@ -12,231 +31,215 @@ export default function MemberDashboardPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadDashboardData() {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await reportsApi.getMyReports(1, 5);
-        setReports(response.data);
-        setTotalRecords(response.meta.totalRecords);
-      } catch (err: any) {
-        setError(
-          err?.response?.data?.message || 'Failed to load your dashboard data.',
-        );
-      } finally {
-        setLoading(false);
-      }
+  const loadDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await reportsApi.getMyReports(1, 5);
+      setReports(response.data);
+      setTotalRecords(response.meta.totalRecords);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message || 'Failed to load your dashboard data.',
+      );
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadDashboardData();
   }, []);
 
+  if (loading && reports.length === 0) {
+    return <LoadingState message="Loading your dashboard..." />;
+  }
+
   const latestReport = reports.length > 0 ? reports[0] : null;
   const approvedCount = reports.filter((r) => r.status === ReportStatus.APPROVED).length;
-  const correctionCount = reports.filter((r) => r.status === ReportStatus.NEEDS_CORRECTION).length;
+  const correctionCount = reports.filter(
+    (r) => r.status === ReportStatus.NEEDS_CORRECTION,
+  ).length;
   const draftCount = reports.filter((r) => r.status === ReportStatus.DRAFT).length;
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {user?.firstName}!
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Track your weekly reports, tasks, deliverables, and submissions.
-          </p>
-        </div>
-        <div className="flex items-center space-x-3 shrink-0">
-          <Link
-            to="/reports/new"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
-          >
-            + Create New Report
+    <div className="space-y-6 min-w-0">
+      {/* 1. Page Header */}
+      <PageHeader
+        title={`Welcome back, ${user?.firstName || 'Team Member'}!`}
+        description="Track your weekly work submissions, deliverables, tasks, and manager reviews."
+        actions={
+          <Link to="/reports/new">
+            <Button variant="primary" size="md">
+              + Create Weekly Report
+            </Button>
           </Link>
-        </div>
+        }
+      />
+
+      {error && <ErrorState message={error} onRetry={loadDashboardData} />}
+
+      {/* 2. Executive Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 min-w-0">
+        <MetricCard
+          label="Total Reports"
+          value={totalRecords}
+          subtext="Lifetime submissions"
+          tone="neutral"
+        />
+        <MetricCard
+          label="Approved"
+          value={approvedCount}
+          subtext="Reviewed & accepted"
+          tone="emerald"
+        />
+        <MetricCard
+          label="Needs Correction"
+          value={correctionCount}
+          subtext="Awaiting revision"
+          tone={correctionCount > 0 ? 'amber' : 'neutral'}
+        />
+        <MetricCard
+          label="Active Drafts"
+          value={draftCount}
+          subtext="Work in progress"
+          tone="indigo"
+        />
       </div>
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">
-            Total Submissions
-          </div>
-          <div className="text-2xl font-bold text-gray-900 mt-2">{totalRecords}</div>
-        </div>
-
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-emerald-600 font-medium uppercase tracking-wider">
-            Approved Reports
-          </div>
-          <div className="text-2xl font-bold text-emerald-700 mt-2">{approvedCount}</div>
-        </div>
-
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-amber-600 font-medium uppercase tracking-wider">
-            Needs Correction
-          </div>
-          <div className="text-2xl font-bold text-amber-700 mt-2">{correctionCount}</div>
-        </div>
-
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-xs text-indigo-600 font-medium uppercase tracking-wider">
-            Active Drafts
-          </div>
-          <div className="text-2xl font-bold text-indigo-700 mt-2">{draftCount}</div>
-        </div>
-      </div>
-
-      {/* Latest Report Callout */}
+      {/* 3. Latest Report Spotlight */}
       {latestReport && (
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 shadow-sm">
+        <Card className="border-indigo-100 bg-gradient-to-r from-indigo-50/40 via-white to-sky-50/30 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-700">
-                  Latest Submission
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+                  Latest Submission Spotlight
                 </span>
-                <StatusBadge status={latestReport.status} />
+                <StatusBadge status={latestReport.status} size="sm" />
               </div>
-              <h2 className="text-lg font-bold text-gray-900 mt-1">
+
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
                 Week: {latestReport.weekStart} – {latestReport.weekEnd}
               </h2>
-              <p className="text-sm text-gray-600 mt-0.5">
-                Project: <span className="font-semibold">{latestReport.project?.name || '—'}</span>
+
+              <p className="text-xs text-slate-600">
+                Project:{' '}
+                <span className="font-semibold text-slate-900">
+                  {latestReport.project?.name || 'Unassigned'}
+                </span>
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+
+            <div className="flex items-center gap-2.5 shrink-0">
               {latestReport.status === ReportStatus.NEEDS_CORRECTION ||
               latestReport.status === ReportStatus.DRAFT ? (
-                <Link
-                  to={`/reports/${latestReport.id}/edit`}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
-                >
-                  Edit & Resubmit
+                <Link to={`/reports/${latestReport.id}/edit`}>
+                  <Button variant="primary" size="sm">
+                    Edit & Resubmit
+                  </Button>
                 </Link>
               ) : null}
-              <Link
-                to={`/reports/${latestReport.id}`}
-                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-semibold shadow-sm transition-colors"
-              >
-                View Details
+              <Link to={`/reports/${latestReport.id}`}>
+                <Button variant="outline" size="sm">
+                  View Details
+                </Button>
               </Link>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Recent Reports Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-200 flex items-center justify-between">
+      {/* 4. Recent Reports Table */}
+      <Card className="min-w-0">
+        <CardHeader>
           <div>
-            <h2 className="text-base font-bold text-gray-900">Recent Reports</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <CardTitle>Recent Reports</CardTitle>
+            <CardDescription>
               Your latest submitted and draft reports.
-            </p>
+            </CardDescription>
           </div>
           <Link
             to="/reports/history"
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
           >
             View All History →
           </Link>
-        </div>
+        </CardHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm text-gray-500 font-medium">Loading reports...</span>
-            </div>
-          </div>
-        ) : reports.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="text-gray-400 text-4xl">📝</div>
-            <h3 className="text-base font-semibold text-gray-900">No Reports Created Yet</h3>
-            <p className="text-sm text-gray-500 max-w-sm mx-auto">
-              Get started by creating your first weekly report for your assigned project.
-            </p>
-            <div className="pt-2">
-              <Link
-                to="/reports/new"
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
-              >
-                + Create Report
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-700 border-b border-gray-200">
+        <CardContent>
+          {reports.length === 0 ? (
+            <EmptyState
+              icon="📝"
+              title="No reports created yet"
+              description="Start authoring your first weekly report for your current sprint or project."
+              action={{
+                label: '+ Create First Report',
+                to: '/reports/new',
+                variant: 'primary',
+              }}
+            />
+          ) : (
+            <DataTable>
+              <TableHead>
                 <tr>
-                  <th className="py-3.5 px-6">Week Range</th>
-                  <th className="py-3.5 px-6">Project</th>
-                  <th className="py-3.5 px-6">Status</th>
-                  <th className="py-3.5 px-6">Tasks Count</th>
-                  <th className="py-3.5 px-6">Submitted Date</th>
-                  <th className="py-3.5 px-6 text-right">Actions</th>
+                  <TableHeaderCell>Week Range</TableHeaderCell>
+                  <TableHeaderCell>Project</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>Tasks Count</TableHeaderCell>
+                  <TableHeaderCell>Submitted Date</TableHeaderCell>
+                  <TableHeaderCell align="right">Action</TableHeaderCell>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
+              </TableHead>
+              <TableBody>
                 {reports.map((report) => {
                   const canEdit =
                     report.status === ReportStatus.DRAFT ||
                     report.status === ReportStatus.NEEDS_CORRECTION;
 
                   return (
-                    <tr key={report.id} className="hover:bg-gray-50/75 transition-colors">
-                      <td className="py-4 px-6 text-gray-900 font-medium whitespace-nowrap">
+                    <TableRow key={report.id}>
+                      <TableCell className="font-medium text-slate-900">
                         {report.weekStart} – {report.weekEnd}
-                      </td>
-                      <td className="py-4 px-6 text-gray-800 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-800">
                         {report.project?.name || '—'}
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <StatusBadge status={report.status} />
-                      </td>
-                      <td className="py-4 px-6 text-gray-700 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={report.status} size="sm" />
+                      </TableCell>
+                      <TableCell className="text-slate-600">
                         {report.tasks?.length || 0} tasks
-                      </td>
-                      <td className="py-4 px-6 text-gray-500 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="text-slate-500">
                         {report.submittedAt
                           ? new Date(report.submittedAt).toLocaleDateString()
                           : '—'}
-                      </td>
-                      <td className="py-4 px-6 text-right whitespace-nowrap space-x-2">
-                        {canEdit && (
-                          <Link
-                            to={`/reports/${report.id}/edit`}
-                            className="font-medium px-3 py-1.5 rounded-md text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
-                          >
-                            Edit
+                      </TableCell>
+                      <TableCell align="right">
+                        <div className="flex items-center justify-end gap-2">
+                          {canEdit && (
+                            <Link to={`/reports/${report.id}/edit`}>
+                              <Button variant="secondary" size="sm">
+                                Edit
+                              </Button>
+                            </Link>
+                          )}
+                          <Link to={`/reports/${report.id}`}>
+                            <Button variant="outline" size="sm">
+                              View
+                            </Button>
                           </Link>
-                        )}
-                        <Link
-                          to={`/reports/${report.id}`}
-                          className="font-medium px-3 py-1.5 rounded-md text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </TableBody>
+            </DataTable>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

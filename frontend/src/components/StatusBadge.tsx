@@ -1,49 +1,142 @@
-import { ReportStatus } from '../types';
+import { ReportStatus, TaskStatus, TaskPriority, UserRole } from '../types';
+import { Badge } from './ui/Badge';
 
-interface StatusBadgeProps {
-  status: ReportStatus | 'NOT_STARTED' | string;
+export interface StatusBadgeProps {
+  status:
+    | ReportStatus
+    | TaskStatus
+    | TaskPriority
+    | UserRole
+    | 'NOT_STARTED'
+    | 'ACTIVE'
+    | 'INACTIVE'
+    | string;
+  size?: 'sm' | 'md';
 }
 
-export default function StatusBadge({ status }: StatusBadgeProps) {
-  const getBadgeStyle = () => {
-    switch (status) {
-      case 'NOT_STARTED':
-        return 'bg-gray-100 text-gray-600 border-gray-300';
-      case ReportStatus.DRAFT:
-        return 'bg-purple-50 text-purple-700 border-purple-200';
-      case ReportStatus.SUBMITTED:
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case ReportStatus.NEEDS_CORRECTION:
-        return 'bg-amber-50 text-amber-700 border-amber-300';
-      case ReportStatus.APPROVED:
-        return 'bg-green-50 text-green-700 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
+export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
+  switch (status) {
+    // Report Statuses
+    case ReportStatus.DRAFT:
+      return (
+        <Badge variant="neutral" size={size} dot>
+          Draft
+        </Badge>
+      );
+    case ReportStatus.SUBMITTED:
+      return (
+        <Badge variant="sky" size={size} dot>
+          Submitted
+        </Badge>
+      );
+    case ReportStatus.NEEDS_CORRECTION:
+      return (
+        <Badge variant="amber" size={size} dot>
+          Needs Correction
+        </Badge>
+      );
+    case ReportStatus.APPROVED:
+      return (
+        <Badge variant="emerald" size={size} dot>
+          Approved
+        </Badge>
+      );
+    case 'NOT_STARTED':
+      return (
+        <Badge variant="neutral" size={size} dot>
+          Not Started
+        </Badge>
+      );
 
-  const getLabel = () => {
-    switch (status) {
-      case 'NOT_STARTED':
-        return 'Not Started';
-      case ReportStatus.DRAFT:
-        return 'Draft';
-      case ReportStatus.SUBMITTED:
-        return 'Submitted';
-      case ReportStatus.NEEDS_CORRECTION:
-        return 'Needs Correction';
-      case ReportStatus.APPROVED:
-        return 'Approved';
-      default:
-        return status;
-    }
-  };
+    // Task Statuses
+    case TaskStatus.TODO:
+      return (
+        <Badge variant="neutral" size={size}>
+          To Do
+        </Badge>
+      );
+    case TaskStatus.IN_PROGRESS:
+      return (
+        <Badge variant="indigo" size={size}>
+          In Progress
+        </Badge>
+      );
+    case TaskStatus.COMPLETED:
+      return (
+        <Badge variant="emerald" size={size}>
+          Completed
+        </Badge>
+      );
+    case TaskStatus.BLOCKED:
+      return (
+        <Badge variant="rose" size={size}>
+          Blocked
+        </Badge>
+      );
 
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getBadgeStyle()}`}
-    >
-      {getLabel()}
-    </span>
-  );
+    // Priorities
+    case TaskPriority.HIGH:
+      return (
+        <Badge variant="rose" size={size}>
+          High
+        </Badge>
+      );
+    case TaskPriority.MEDIUM:
+      return (
+        <Badge variant="amber" size={size}>
+          Medium
+        </Badge>
+      );
+    case TaskPriority.LOW:
+      return (
+        <Badge variant="neutral" size={size}>
+          Low
+        </Badge>
+      );
+
+    // User Roles
+    case UserRole.ADMIN:
+      return (
+        <Badge variant="purple" size={size}>
+          Admin
+        </Badge>
+      );
+    case UserRole.MANAGER:
+      return (
+        <Badge variant="indigo" size={size}>
+          Manager
+        </Badge>
+      );
+    case UserRole.TEAM_MEMBER:
+      return (
+        <Badge variant="emerald" size={size}>
+          Team Member
+        </Badge>
+      );
+
+    // Active/Inactive
+    case 'ACTIVE':
+    case 'true':
+    case true as any:
+      return (
+        <Badge variant="emerald" size={size} dot>
+          Active
+        </Badge>
+      );
+    case 'INACTIVE':
+    case 'false':
+    case false as any:
+      return (
+        <Badge variant="neutral" size={size} dot>
+          Inactive
+        </Badge>
+      );
+
+    default:
+      return (
+        <Badge variant="neutral" size={size}>
+          {String(status)}
+        </Badge>
+      );
+  }
 }
